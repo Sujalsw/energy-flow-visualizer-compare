@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Zap, Activity, TrendingUp, Grid } from 'lucide-react';
+import HeatmapDashboard from '../components/HeatmapDashboard';
 
 // Mock data structure matching your database schema
 const slaveFeeders = [
@@ -247,6 +248,9 @@ const Index = () => {
             Real-time Multi-Feeder Electrical Parameter Comparison Dashboard
           </p>
         </div>
+
+        {/* Independent Heatmap Dashboard */}
+        <HeatmapDashboard />
 
         {/* Control Panel */}
         <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
