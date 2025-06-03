@@ -373,7 +373,7 @@ const Index = () => {
           </Card>
         )}
 
-        {/* Real-time Heatmap */}
+        {/* Real-time Heatmap - Only show selected feeders and parameters */}
         {selectedFeeders.length > 0 && selectedParameters.length > 0 && chartData.length > 0 && (
           <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
             <CardHeader>
