@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Zap, Activity, TrendingUp } from 'lucide-react';
+import { Zap, Activity, TrendingUp, Grid } from 'lucide-react';
 
 // Mock data structure matching your database schema
 const slaveFeeders = [
@@ -203,6 +202,36 @@ const Index = () => {
     return lines;
   };
 
+  // Get the latest values for heatmap
+  const getLatestValues = () => {
+    if (chartData.length === 0) return {};
+    const latestData = chartData[chartData.length - 1];
+    return latestData;
+  };
+
+  // Get color intensity based on value range for each parameter
+  const getHeatmapColor = (value: number, param: string) => {
+    let normalizedValue = 0;
+    
+    if (param.includes('current')) {
+      normalizedValue = Math.min(value / 60, 1); // Max expected 60A
+    } else if (param.includes('voltage')) {
+      normalizedValue = Math.min((value - 200) / 80, 1); // Range 200-280V
+    } else if (param.includes('power_factor')) {
+      normalizedValue = Math.min((value - 0.7) / 0.3, 1); // Range 0.7-1.0
+    } else if (param === 'active_energy') {
+      normalizedValue = Math.min(value / 1500, 1); // Max expected 1500 kWh
+    }
+    
+    const intensity = Math.max(0, Math.min(1, normalizedValue));
+    const red = Math.floor(255 * (1 - intensity));
+    const green = Math.floor(255 * intensity);
+    
+    return `rgb(${red}, ${green}, 100)`;
+  };
+
+  const latestValues = getLatestValues();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -339,6 +368,74 @@ const Index = () => {
                     {generateChartLines()}
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Real-time Heatmap */}
+        {selectedFeeders.length > 0 && selectedParameters.length > 0 && chartData.length > 0 && (
+          <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center space-x-2">
+                <Grid className="h-6 w-6 text-cyan-400" />
+                <span>Real-time Values Heatmap</span>
+                {isRealTimeActive && (
+                  <div className="flex items-center space-x-2 ml-4">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-green-400">Live</span>
+                  </div>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="text-left text-cyan-300 p-3 font-semibold">Feeder / Parameter</th>
+                      {selectedParameters.map(param => {
+                        const paramInfo = parameters.find(p => p.value === param);
+                        return (
+                          <th key={param} className="text-center text-cyan-300 p-3 font-semibold min-w-[120px]">
+                            {paramInfo?.label || param}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedFeeders.map(feeder => (
+                      <tr key={feeder} className="border-t border-gray-600">
+                        <td className="text-gray-300 p-3 font-medium text-sm">
+                          {feeder}
+                        </td>
+                        {selectedParameters.map(param => {
+                          const key = `${feeder}_${param}`;
+                          const value = latestValues[key];
+                          const paramInfo = parameters.find(p => p.value === param);
+                          
+                          return (
+                            <td
+                              key={key}
+                              className="text-center p-3 text-white font-mono text-sm rounded-lg"
+                              style={{
+                                backgroundColor: value ? getHeatmapColor(value, param) : '#374151',
+                                margin: '2px'
+                              }}
+                            >
+                              {value ? `${value.toFixed(2)} ${paramInfo?.unit || ''}` : 'N/A'}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 text-xs text-gray-400 text-center">
+                <p>Color intensity indicates relative value within expected range for each parameter</p>
+                <p>Green = Higher values, Red = Lower values</p>
               </div>
             </CardContent>
           </Card>
