@@ -43,7 +43,7 @@ const parameters = [
   'active_energy'
 ];
 
-// Predefined ranges for normalization (you can adjust these based on your actual data ranges)
+// Predefined ranges for normalization
 const parameterRanges = {
   current_r: { min: 0, max: 100 },
   current_y: { min: 0, max: 100 },
@@ -57,49 +57,43 @@ const parameterRanges = {
   active_energy: { min: 0, max: 2000 }
 };
 
-interface HeatmapData {
+interface FeederData {
   feeder: string;
-  timePoints: {
-    timestamp: string;
-    activityScore: number;
-    isOff: boolean;
-    rawData: any;
-  }[];
+  activityScore: number;
+  isOff: boolean;
+  rawData: any;
+  timestamp: string;
 }
 
-// Generate mock data that simulates the API response
+// Generate mock data that simulates the latest API response
 const generateMockApiData = () => {
   const now = new Date();
   const data = [];
   
-  for (let timeOffset = 11; timeOffset >= 0; timeOffset--) {
-    const timestamp = new Date(now.getTime() - timeOffset * 35 * 1000); // 35 second intervals
+  slaveFeeders.forEach((feeder, index) => {
+    // Simulate some feeders being "off" occasionally
+    const isOff = Math.random() < 0.15; // 15% chance of being off
     
-    slaveFeeders.forEach((feeder, index) => {
-      // Simulate some feeders being "off" occasionally
-      const isOff = Math.random() < 0.1; // 10% chance of being off
-      
-      const dataPoint = {
-        id: index + 1 + timeOffset * 27,
-        timestamp: timestamp.toISOString(),
-        location: "MRSS",
-        slave_id: index + 1,
-        slave_name: feeder,
-        current_r: isOff ? 0 : Math.random() * 80 + 10,
-        current_y: isOff ? 0 : Math.random() * 80 + 10,
-        current_b: isOff ? 0 : Math.random() * 80 + 10,
-        voltage_ry: isOff ? 0 : Math.random() * 60 + 220,
-        voltage_yb: isOff ? 0 : Math.random() * 60 + 220,
-        voltage_br: isOff ? 0 : Math.random() * 60 + 220,
-        power_factor_r: isOff ? 0 : Math.random() * 0.4 + 0.6,
-        power_factor_y: isOff ? 0 : Math.random() * 0.4 + 0.6,
-        power_factor_b: isOff ? 0 : Math.random() * 0.4 + 0.6,
-        active_energy: isOff ? 0 : Math.random() * 1500 + 500
-      };
-      
-      data.push(dataPoint);
-    });
-  }
+    const dataPoint = {
+      id: index + 1,
+      timestamp: now.toISOString(),
+      location: "MRSS",
+      slave_id: index + 1,
+      slave_name: feeder,
+      current_r: isOff ? 0 : Math.random() * 80 + 10,
+      current_y: isOff ? 0 : Math.random() * 80 + 10,
+      current_b: isOff ? 0 : Math.random() * 80 + 10,
+      voltage_ry: isOff ? 0 : Math.random() * 60 + 220,
+      voltage_yb: isOff ? 0 : Math.random() * 60 + 220,
+      voltage_br: isOff ? 0 : Math.random() * 60 + 220,
+      power_factor_r: isOff ? 0 : Math.random() * 0.4 + 0.6,
+      power_factor_y: isOff ? 0 : Math.random() * 0.4 + 0.6,
+      power_factor_b: isOff ? 0 : Math.random() * 0.4 + 0.6,
+      active_energy: isOff ? 0 : Math.random() * 1500 + 500
+    };
+    
+    data.push(dataPoint);
+  });
   
   return data;
 };
@@ -112,7 +106,7 @@ const normalizeParameter = (value: number, param: string): number => {
   return Math.max(0, Math.min(1, (value - range.min) / (range.max - range.min)));
 };
 
-// Calculate activity score for a feeder at a given time
+// Calculate activity score for a feeder
 const calculateActivityScore = (data: any): { score: number; isOff: boolean } => {
   // Check if all parameters are zero (machine is off)
   const allParametersZero = parameters.every(param => data[param] === 0);
@@ -156,42 +150,53 @@ const getActivityColor = (activityScore: number, isOff: boolean): string => {
   }
 };
 
-// Process API data into heatmap format
-const processHeatmapData = (apiData: any[]): HeatmapData[] => {
-  const processed: HeatmapData[] = [];
-  
-  slaveFeeders.forEach(feeder => {
-    const feederData = apiData.filter(item => item.slave_name === feeder);
+// Process API data into grid format
+const processGridData = (apiData: any[]): FeederData[] => {
+  return slaveFeeders.map(feeder => {
+    const feederData = apiData.find(item => item.slave_name === feeder);
     
-    // Group by timestamp and calculate activity scores
-    const timePointsMap = new Map();
+    if (!feederData) {
+      return {
+        feeder,
+        activityScore: 0,
+        isOff: true,
+        rawData: null,
+        timestamp: new Date().toISOString()
+      };
+    }
     
-    feederData.forEach(item => {
-      const { score, isOff } = calculateActivityScore(item);
-      timePointsMap.set(item.timestamp, {
-        timestamp: item.timestamp,
-        activityScore: score,
-        isOff: isOff,
-        rawData: item
-      });
-    });
+    const { score, isOff } = calculateActivityScore(feederData);
     
-    // Convert to array and sort by timestamp
-    const timePoints = Array.from(timePointsMap.values()).sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    
-    processed.push({
+    return {
       feeder,
-      timePoints
-    });
+      activityScore: score,
+      isOff: isOff,
+      rawData: feederData,
+      timestamp: feederData.timestamp
+    };
   });
+};
+
+// Arrange feeders in 3x9 grid
+const arrangeInGrid = (feeders: FeederData[]): FeederData[][] => {
+  const grid: FeederData[][] = [];
   
-  return processed;
+  for (let row = 0; row < 3; row++) {
+    const rowData: FeederData[] = [];
+    for (let col = 0; col < 9; col++) {
+      const index = row * 9 + col;
+      if (index < feeders.length) {
+        rowData.push(feeders[index]);
+      }
+    }
+    grid.push(rowData);
+  }
+  
+  return grid;
 };
 
 const LiveHeatmap: React.FC = () => {
-  const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([]);
+  const [gridData, setGridData] = useState<FeederData[][]>([]);
   const [isLiveActive, setIsLiveActive] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
@@ -203,13 +208,14 @@ const LiveHeatmap: React.FC = () => {
       // const apiData = await response.json();
       
       const apiData = generateMockApiData();
-      const processedData = processHeatmapData(apiData);
-      setHeatmapData(processedData);
+      const processedData = processGridData(apiData);
+      const gridArranged = arrangeInGrid(processedData);
+      setGridData(gridArranged);
       setLastUpdate(new Date());
       
-      console.log('Heatmap data updated:', processedData.length, 'feeders');
+      console.log('Grid heatmap data updated:', processedData.length, 'feeders');
     } catch (error) {
-      console.error('Error fetching heatmap data:', error);
+      console.error('Error fetching grid heatmap data:', error);
     }
   };
 
@@ -235,23 +241,13 @@ const LiveHeatmap: React.FC = () => {
     };
   }, [isLiveActive]);
 
-  // Generate time column headers
-  const getTimeHeaders = () => {
-    if (heatmapData.length === 0) return [];
-    
-    const firstFeederTimePoints = heatmapData[0]?.timePoints || [];
-    return firstFeederTimePoints.map((_, index) => `T-${11 - index}`);
-  };
-
-  const timeHeaders = getTimeHeaders();
-
   return (
     <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="text-white flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Activity className="h-6 w-6 text-cyan-400" />
-            <span>Live Activity Heatmap - All Feeders</span>
+            <span>Live Activity Heatmap - 3x9 Grid</span>
             {isLiveActive && (
               <div className="flex items-center space-x-2 ml-4">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -289,7 +285,7 @@ const LiveHeatmap: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {heatmapData.length > 0 ? (
+        {gridData.length > 0 ? (
           <div className="space-y-4">
             {/* Legend */}
             <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg">
@@ -316,75 +312,62 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Heatmap Table */}
-            <div className="overflow-x-auto bg-gray-900/30 rounded-lg">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 bg-gray-800 text-cyan-300 p-3 text-left border border-gray-600 font-semibold min-w-[200px]">
-                      Feeder Name
-                    </th>
-                    {timeHeaders.map((header, index) => (
-                      <th 
-                        key={index} 
-                        className="text-cyan-300 p-3 text-center border border-gray-600 font-semibold min-w-[80px]"
+            {/* 3x9 Grid Heatmap */}
+            <div className="space-y-3">
+              {gridData.map((row, rowIndex) => (
+                <div key={rowIndex} className="flex space-x-3 justify-center">
+                  {row.map((feederData, colIndex) => {
+                    const backgroundColor = getActivityColor(feederData.activityScore, feederData.isOff);
+                    const textColor = feederData.isOff || feederData.activityScore > 0.5 ? '#FFFFFF' : '#000000';
+                    
+                    return (
+                      <div
+                        key={`${rowIndex}-${colIndex}`}
+                        className="relative group cursor-pointer border border-gray-600 rounded-lg p-4 min-w-[160px] min-h-[120px] flex flex-col justify-center items-center text-center transition-all hover:scale-105 hover:shadow-lg"
+                        style={{ backgroundColor }}
                       >
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {heatmapData.map((feederData, rowIndex) => (
-                    <tr key={feederData.feeder} className="hover:bg-gray-700/30 transition-colors">
-                      <td className="sticky left-0 bg-gray-800 text-gray-300 p-3 border border-gray-600 font-medium text-sm">
-                        {feederData.feeder}
-                      </td>
-                      {feederData.timePoints.map((timePoint, colIndex) => {
-                        const backgroundColor = getActivityColor(timePoint.activityScore, timePoint.isOff);
-                        const textColor = timePoint.isOff || timePoint.activityScore > 0.5 ? '#FFFFFF' : '#000000';
+                        <div 
+                          className="text-sm font-semibold leading-tight mb-2"
+                          style={{ color: textColor }}
+                        >
+                          {feederData.feeder}
+                        </div>
+                        <div 
+                          className="text-xs font-mono"
+                          style={{ color: textColor }}
+                        >
+                          {feederData.isOff ? 'OFF' : `Score: ${feederData.activityScore.toFixed(2)}`}
+                        </div>
                         
-                        return (
-                          <td
-                            key={colIndex}
-                            className="border border-gray-600 p-3 text-center relative group cursor-pointer"
-                            style={{ backgroundColor }}
-                          >
-                            <div className="text-xs font-mono" style={{ color: textColor }}>
-                              {timePoint.isOff ? 'OFF' : timePoint.activityScore.toFixed(2)}
-                            </div>
-                            
-                            {/* Tooltip */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20">
-                              <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg border border-gray-600 max-w-xs">
-                                <div className="font-semibold">{feederData.feeder}</div>
-                                <div>Time: {new Date(timePoint.timestamp).toLocaleTimeString()}</div>
-                                <div>Status: {timePoint.isOff ? 'OFF' : 'ACTIVE'}</div>
-                                <div>Activity Score: {timePoint.activityScore.toFixed(3)}</div>
-                                {!timePoint.isOff && (
-                                  <>
-                                    <div className="mt-1 text-gray-300">Sample Values:</div>
-                                    <div>Current R: {timePoint.rawData.current_r?.toFixed(1)}A</div>
-                                    <div>Voltage RY: {timePoint.rawData.voltage_ry?.toFixed(1)}V</div>
-                                    <div>Active Energy: {timePoint.rawData.active_energy?.toFixed(1)}kWh</div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20">
+                          <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg border border-gray-600 max-w-xs">
+                            <div className="font-semibold">{feederData.feeder}</div>
+                            <div>Status: {feederData.isOff ? 'OFF' : 'ACTIVE'}</div>
+                            <div>Activity Score: {feederData.activityScore.toFixed(3)}</div>
+                            <div>Last Update: {new Date(feederData.timestamp).toLocaleTimeString()}</div>
+                            {!feederData.isOff && feederData.rawData && (
+                              <>
+                                <div className="mt-1 text-gray-300">Sample Values:</div>
+                                <div>Current R: {feederData.rawData.current_r?.toFixed(1)}A</div>
+                                <div>Voltage RY: {feederData.rawData.voltage_ry?.toFixed(1)}V</div>
+                                <div>Active Energy: {feederData.rawData.active_energy?.toFixed(1)}kWh</div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
 
             {/* Update Info */}
             <div className="text-center text-sm text-gray-400">
               <p>
                 Updates every 30-40 seconds • 
-                Showing last 12 time points • 
+                Showing latest data for all 27 feeders in 3x9 grid • 
                 Activity score based on normalized average of all parameters
               </p>
               <p className="mt-1">
@@ -396,7 +379,7 @@ const LiveHeatmap: React.FC = () => {
           <div className="text-center py-12">
             <Activity className="h-16 w-16 text-cyan-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">
-              Loading Heatmap Data...
+              Loading Grid Data...
             </h3>
             <p className="text-gray-400">
               Fetching real-time activity data for all 27 feeders
