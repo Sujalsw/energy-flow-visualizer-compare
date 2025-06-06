@@ -1,8 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Play, Pause } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Activity, Play, Pause, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 // All 27 feeders
 const slaveFeeders = [
@@ -199,14 +201,11 @@ const LiveHeatmap: React.FC = () => {
   const [gridData, setGridData] = useState<FeederData[][]>([]);
   const [isLiveActive, setIsLiveActive] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [exportType, setExportType] = useState<string>('live');
+  const [specificTime, setSpecificTime] = useState<string>('');
 
-  // Fetch and process data
   const fetchData = () => {
     try {
-      // In a real implementation, this would be an actual API call
-      // const response = await fetch('/api/energy-data');
-      // const apiData = await response.json();
-      
       const apiData = generateMockApiData();
       const processedData = processGridData(apiData);
       const gridArranged = arrangeInGrid(processedData);
@@ -219,19 +218,74 @@ const LiveHeatmap: React.FC = () => {
     }
   };
 
-  // Initial data load
+  const exportToExcel = () => {
+    let dataToExport: any[] = [];
+    
+    if (exportType === 'live') {
+      // Export current live data
+      const flatData = gridData.flat();
+      dataToExport = flatData.map(feeder => ({
+        'Feeder Name': feeder.feeder,
+        'Timestamp': feeder.timestamp,
+        'Activity Score': feeder.activityScore.toFixed(3),
+        'Status': feeder.isOff ? 'OFF' : 'ACTIVE',
+        'Current R': feeder.rawData?.current_r?.toFixed(2) || '0',
+        'Current Y': feeder.rawData?.current_y?.toFixed(2) || '0',
+        'Current B': feeder.rawData?.current_b?.toFixed(2) || '0',
+        'Voltage RY': feeder.rawData?.voltage_ry?.toFixed(2) || '0',
+        'Voltage YB': feeder.rawData?.voltage_yb?.toFixed(2) || '0',
+        'Voltage BR': feeder.rawData?.voltage_br?.toFixed(2) || '0',
+        'Power Factor R': feeder.rawData?.power_factor_r?.toFixed(3) || '0',
+        'Power Factor Y': feeder.rawData?.power_factor_y?.toFixed(3) || '0',
+        'Power Factor B': feeder.rawData?.power_factor_b?.toFixed(3) || '0',
+        'Active Energy': feeder.rawData?.active_energy?.toFixed(2) || '0'
+      }));
+    } else {
+      // For specific time, generate mock data with the specified timestamp
+      const mockData = generateMockApiData();
+      dataToExport = mockData.map(item => {
+        const { score, isOff } = calculateActivityScore(item);
+        return {
+          'Feeder Name': item.slave_name,
+          'Timestamp': specificTime || item.timestamp,
+          'Activity Score': score.toFixed(3),
+          'Status': isOff ? 'OFF' : 'ACTIVE',
+          'Current R': item.current_r?.toFixed(2) || '0',
+          'Current Y': item.current_y?.toFixed(2) || '0',
+          'Current B': item.current_b?.toFixed(2) || '0',
+          'Voltage RY': item.voltage_ry?.toFixed(2) || '0',
+          'Voltage YB': item.voltage_yb?.toFixed(2) || '0',
+          'Voltage BR': item.voltage_br?.toFixed(2) || '0',
+          'Power Factor R': item.power_factor_r?.toFixed(3) || '0',
+          'Power Factor Y': item.power_factor_y?.toFixed(3) || '0',
+          'Power Factor B': item.power_factor_b?.toFixed(3) || '0',
+          'Active Energy': item.active_energy?.toFixed(2) || '0'
+        };
+      });
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Energy Data');
+    
+    const filename = exportType === 'live' 
+      ? `energy_data_live_${new Date().toISOString().split('T')[0]}.xlsx`
+      : `energy_data_${specificTime.replace(/[:\-T]/g, '_')}.xlsx`;
+    
+    XLSX.writeFile(workbook, filename);
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Auto-update mechanism
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (isLiveActive) {
       interval = setInterval(() => {
         fetchData();
-      }, 35000); // 35 seconds (30-40 second range)
+      }, 10000); // Updated to 10 seconds
     }
     
     return () => {
@@ -242,7 +296,7 @@ const LiveHeatmap: React.FC = () => {
   }, [isLiveActive]);
 
   return (
-    <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
+    <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm max-w-[900px] mx-auto">
       <CardHeader>
         <CardTitle className="text-white flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -287,47 +341,25 @@ const LiveHeatmap: React.FC = () => {
       <CardContent>
         {gridData.length > 0 ? (
           <div className="space-y-4">
-            {/* Legend */}
-            <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg">
-              <span className="text-sm text-gray-300 font-semibold">Activity Score Legend:</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#0000FF' }}></div>
-                <span className="text-xs text-gray-400">Off</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#00FF00' }}></div>
-                <span className="text-xs text-gray-400">Low</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FFFF00' }}></div>
-                <span className="text-xs text-gray-400">Medium</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FFA500' }}></div>
-                <span className="text-xs text-gray-400">High</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FF0000' }}></div>
-                <span className="text-xs text-gray-400">Critical</span>
-              </div>
-            </div>
-
-            {/* 3x9 Grid Heatmap */}
-            <div className="space-y-3">
-              {gridData.map((row, rowIndex) => (
-                <div key={rowIndex} className="flex space-x-3 justify-center">
-                  {row.map((feederData, colIndex) => {
+            {/* 3x9 Grid Heatmap - Table Style */}
+            <div className="w-full overflow-x-auto">
+              <div className="grid grid-cols-9 gap-0 border border-gray-600" style={{ borderCollapse: 'collapse' }}>
+                {gridData.map((row, rowIndex) => 
+                  row.map((feederData, colIndex) => {
                     const backgroundColor = getActivityColor(feederData.activityScore, feederData.isOff);
                     const textColor = feederData.isOff || feederData.activityScore > 0.5 ? '#FFFFFF' : '#000000';
                     
                     return (
                       <div
                         key={`${rowIndex}-${colIndex}`}
-                        className="relative group cursor-pointer border border-gray-600 rounded-lg p-4 min-w-[160px] min-h-[120px] flex flex-col justify-center items-center text-center transition-all hover:scale-105 hover:shadow-lg"
-                        style={{ backgroundColor }}
+                        className="relative group cursor-pointer border border-gray-600 p-2 h-24 flex flex-col justify-center items-center text-center transition-all hover:scale-105 hover:shadow-lg"
+                        style={{ 
+                          backgroundColor,
+                          borderRadius: '0' // Remove curved edges
+                        }}
                       >
                         <div 
-                          className="text-sm font-semibold leading-tight mb-2"
+                          className="text-xs font-semibold leading-tight mb-1"
                           style={{ color: textColor }}
                         >
                           {feederData.feeder}
@@ -336,7 +368,7 @@ const LiveHeatmap: React.FC = () => {
                           className="text-xs font-mono"
                           style={{ color: textColor }}
                         >
-                          {feederData.isOff ? 'OFF' : `Score: ${feederData.activityScore.toFixed(2)}`}
+                          {feederData.isOff ? 'OFF' : `${feederData.activityScore.toFixed(2)}`}
                         </div>
                         
                         {/* Tooltip */}
@@ -358,15 +390,83 @@ const LiveHeatmap: React.FC = () => {
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Legend - Moved Below */}
+            <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg">
+              <span className="text-sm text-gray-300 font-semibold">Activity Score Legend:</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4" style={{ backgroundColor: '#0000FF' }}></div>
+                <span className="text-xs text-gray-400">Off</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4" style={{ backgroundColor: '#00FF00' }}></div>
+                <span className="text-xs text-gray-400">Low</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4" style={{ backgroundColor: '#FFFF00' }}></div>
+                <span className="text-xs text-gray-400">Medium</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4" style={{ backgroundColor: '#FFA500' }}></div>
+                <span className="text-xs text-gray-400">High</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4" style={{ backgroundColor: '#FF0000' }}></div>
+                <span className="text-xs text-gray-400">Critical</span>
+              </div>
+            </div>
+
+            {/* Export Section */}
+            <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-600">
+              <h3 className="text-lg font-semibold text-cyan-300 mb-4 flex items-center">
+                <Download className="h-5 w-5 mr-2" />
+                Export Data to Excel
+              </h3>
+              <div className="flex items-center space-x-4 flex-wrap">
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm text-gray-300">Export Type:</label>
+                  <Select value={exportType} onValueChange={setExportType}>
+                    <SelectTrigger className="w-40 bg-gray-800 border-gray-600 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="live">Live Data</SelectItem>
+                      <SelectItem value="specific">Specific Time</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
+                
+                {exportType === 'specific' && (
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-300">Timestamp:</label>
+                    <Input
+                      type="datetime-local"
+                      value={specificTime}
+                      onChange={(e) => setSpecificTime(e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                  </div>
+                )}
+                
+                <Button
+                  onClick={exportToExcel}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={exportType === 'specific' && !specificTime}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export to Excel
+                </Button>
+              </div>
             </div>
 
             {/* Update Info */}
             <div className="text-center text-sm text-gray-400">
               <p>
-                Updates every 30-40 seconds • 
+                Updates every 10 seconds • 
                 Showing latest data for all 27 feeders in 3x9 grid • 
                 Activity score based on normalized average of all parameters
               </p>
