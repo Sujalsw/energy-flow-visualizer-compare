@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Zap, Activity, TrendingUp, Grid } from 'lucide-react';
-import HeatmapDashboard from '../components/HeatmapDashboard';
 import LiveHeatmap from '../components/LiveHeatmap';
 
 // Mock data structure matching your database schema
@@ -252,9 +251,6 @@ const Index = () => {
 
         {/* Live Heatmap - Power BI Style Table */}
         <LiveHeatmap />
-
-        {/* Independent Heatmap Dashboard */}
-        <HeatmapDashboard />
 
         {/* Control Panel */}
         <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
