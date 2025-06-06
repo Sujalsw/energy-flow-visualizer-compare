@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Zap, Activity, TrendingUp, Grid } from 'lucide-react';
 import HeatmapDashboard from '../components/HeatmapDashboard';
+import LiveHeatmap from '../components/LiveHeatmap';
 
 // Mock data structure matching your database schema
 const slaveFeeders = [
@@ -248,6 +249,9 @@ const Index = () => {
             Real-time Multi-Feeder Electrical Parameter Comparison Dashboard
           </p>
         </div>
+
+        {/* Live Heatmap - Power BI Style Table */}
+        <LiveHeatmap />
 
         {/* Independent Heatmap Dashboard */}
         <HeatmapDashboard />
