@@ -2,9 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Activity, Play, Pause, Download } from 'lucide-react';
+import { Activity, Play, Pause, Download, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 // All 27 feeders
@@ -102,6 +101,42 @@ const generateMockApiData = () => {
   return data;
 };
 
+// Generate mock historical data for time range
+const generateMockHistoricalData = (fromTime: string, toTime: string) => {
+  const start = new Date(fromTime);
+  const end = new Date(toTime);
+  const data = [];
+  
+  // Generate data points every 10 seconds within the time range
+  for (let time = new Date(start); time <= end; time.setSeconds(time.getSeconds() + 10)) {
+    slaveFeeders.forEach((feeder, index) => {
+      const isOff = Math.random() < 0.1; // 10% chance of being off
+      
+      const dataPoint = {
+        id: index + 1,
+        timestamp: time.toISOString(),
+        location: "MRSS",
+        slave_id: index + 1,
+        slave_name: feeder,
+        current_r: isOff ? 0 : Math.random() * 80 + 10,
+        current_y: isOff ? 0 : Math.random() * 80 + 10,
+        current_b: isOff ? 0 : Math.random() * 80 + 10,
+        voltage_ry: isOff ? 0 : Math.random() * 400 + 100,
+        voltage_yb: isOff ? 0 : Math.random() * 400 + 100,
+        voltage_br: isOff ? 0 : Math.random() * 400 + 100,
+        power_factor_r: isOff ? 0 : Math.random() * 0.4 + 0.6,
+        power_factor_y: isOff ? 0 : Math.random() * 0.4 + 0.6,
+        power_factor_b: isOff ? 0 : Math.random() * 0.4 + 0.6,
+        active_energy: isOff ? 0 : Math.random() * 800 + 200
+      };
+      
+      data.push(dataPoint);
+    });
+  }
+  
+  return data;
+};
+
 // Normalize a parameter value based on its group
 const normalizeParameter = (value: number, parameterGroup: string): number => {
   const range = normalizationRanges[parameterGroup as keyof typeof normalizationRanges];
@@ -165,8 +200,9 @@ const LiveHeatmap: React.FC = () => {
   const [heatmapData, setHeatmapData] = useState<HeatmapData>({});
   const [isLiveActive, setIsLiveActive] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [exportType, setExportType] = useState<string>('live');
-  const [specificTime, setSpecificTime] = useState<string>('');
+  const [fromTime, setFromTime] = useState<string>('');
+  const [toTime, setToTime] = useState<string>('');
+  const [exportError, setExportError] = useState<string>('');
 
   const fetchData = () => {
     try {
@@ -181,61 +217,63 @@ const LiveHeatmap: React.FC = () => {
     }
   };
 
-  const exportToExcel = () => {
-    let dataToExport: any[] = [];
+  const validateTimeRange = (): boolean => {
+    setExportError('');
     
-    if (exportType === 'live') {
-      // Export current live data
-      slaveFeeders.forEach(feeder => {
-        const feederData = heatmapData[feeder];
-        if (feederData) {
-          const row: any = {
-            'Feeder Name': feeder,
-            'Timestamp': new Date().toISOString(),
-          };
-          
-          parameters.forEach(param => {
-            const paramData = feederData[param.key];
-            row[param.label] = paramData?.value?.toFixed(2) || '0';
-            row[`${param.label} (Normalized)`] = paramData?.normalizedValue?.toFixed(3) || '0';
-          });
-          
-          dataToExport.push(row);
-        }
-      });
-    } else {
-      // For specific time, generate mock data with the specified timestamp
-      const mockData = generateMockApiData();
-      const processedData = processHeatmapData(mockData);
-      
-      slaveFeeders.forEach(feeder => {
-        const feederData = processedData[feeder];
-        if (feederData) {
-          const row: any = {
-            'Feeder Name': feeder,
-            'Timestamp': specificTime || new Date().toISOString(),
-          };
-          
-          parameters.forEach(param => {
-            const paramData = feederData[param.key];
-            row[param.label] = paramData?.value?.toFixed(2) || '0';
-            row[`${param.label} (Normalized)`] = paramData?.normalizedValue?.toFixed(3) || '0';
-          });
-          
-          dataToExport.push(row);
-        }
-      });
+    if (!fromTime || !toTime) {
+      setExportError('Please provide valid From and To times');
+      return false;
+    }
+    
+    const fromDate = new Date(fromTime);
+    const toDate = new Date(toTime);
+    
+    if (toDate <= fromDate) {
+      setExportError('To Time must be after From Time');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const exportToExcel = () => {
+    if (!validateTimeRange()) {
+      return;
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Heatmap Data');
-    
-    const filename = exportType === 'live' 
-      ? `heatmap_data_live_${new Date().toISOString().split('T')[0]}.xlsx`
-      : `heatmap_data_${specificTime.replace(/[:\-T]/g, '_')}.xlsx`;
-    
-    XLSX.writeFile(workbook, filename);
+    try {
+      // Generate mock historical data for the specified time range
+      const historicalData = generateMockHistoricalData(fromTime, toTime);
+      const dataToExport: any[] = [];
+      
+      historicalData.forEach(record => {
+        const row: any = {
+          'Feeder Name': record.slave_name,
+          'Timestamp': record.timestamp,
+        };
+        
+        parameters.forEach(param => {
+          const value = record[param.key];
+          const normalizedValue = normalizeParameter(value, param.group);
+          row[param.label] = value?.toFixed(2) || '0';
+          row[`${param.label} (Normalized)`] = normalizedValue?.toFixed(3) || '0';
+        });
+        
+        dataToExport.push(row);
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Heatmap Data');
+      
+      const filename = `heatmap_data_${fromTime.replace(/[:\-T]/g, '_')}_to_${toTime.replace(/[:\-T]/g, '_')}.xlsx`;
+      
+      XLSX.writeFile(workbook, filename);
+      setExportError('');
+    } catch (error) {
+      setExportError('Error exporting data. Please try again.');
+      console.error('Export error:', error);
+    }
   };
 
   useEffect(() => {
@@ -264,7 +302,7 @@ const LiveHeatmap: React.FC = () => {
         <CardTitle className="text-white flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Activity className="h-6 w-6 text-cyan-400" />
-            <span>Live Activity Heatmap - 10x27 Grid</span>
+            <span>Live Activity Heatmap - 27x10 Grid</span>
             {isLiveActive && (
               <div className="flex items-center space-x-2 ml-4">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -304,40 +342,40 @@ const LiveHeatmap: React.FC = () => {
       <CardContent>
         {Object.keys(heatmapData).length > 0 ? (
           <div className="space-y-4">
-            {/* 10x27 Grid Heatmap - Parameters as rows, Feeders as columns */}
-            <div className="w-full overflow-x-auto" style={{ maxWidth: '1200px' }}>
+            {/* 27x10 Grid Heatmap - Feeders as rows, Parameters as columns */}
+            <div className="w-full overflow-x-auto" style={{ maxWidth: '1000px' }}>
               <table className="border-collapse border border-gray-600" style={{ fontSize: '11px' }}>
                 <thead>
                   <tr>
-                    <th className="border border-gray-600 p-2 bg-gray-700 text-cyan-300 font-semibold min-w-[150px]">
-                      Parameter / Feeder
+                    <th className="border border-gray-600 p-2 bg-gray-700 text-cyan-300 font-semibold min-w-[200px]">
+                      Feeder / Parameter
                     </th>
-                    {slaveFeeders.map(feeder => (
+                    {parameters.map(param => (
                       <th 
-                        key={feeder} 
+                        key={param.key} 
                         className="border border-gray-600 p-1 bg-gray-700 text-cyan-300 font-semibold text-center"
                         style={{ 
                           writingMode: 'vertical-rl',
                           textOrientation: 'mixed',
-                          minWidth: '40px',
-                          maxWidth: '45px',
+                          minWidth: '80px',
+                          maxWidth: '90px',
                           height: '120px'
                         }}
                       >
                         <div className="transform rotate-180" style={{ whiteSpace: 'nowrap' }}>
-                          {feeder}
+                          {param.label}
                         </div>
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {parameters.map(param => (
-                    <tr key={param.key}>
+                  {slaveFeeders.map(feeder => (
+                    <tr key={feeder}>
                       <td className="border border-gray-600 p-2 bg-gray-700 text-gray-300 font-medium text-left">
-                        {param.label}
+                        {feeder}
                       </td>
-                      {slaveFeeders.map(feeder => {
+                      {parameters.map(param => {
                         const cellData = heatmapData[feeder]?.[param.key];
                         const backgroundColor = cellData 
                           ? getParameterColor(cellData.normalizedValue)
@@ -348,13 +386,13 @@ const LiveHeatmap: React.FC = () => {
                         
                         return (
                           <td
-                            key={`${param.key}-${feeder}`}
+                            key={`${feeder}-${param.key}`}
                             className="border border-gray-600 p-1 text-center relative group cursor-pointer transition-all hover:scale-105"
                             style={{ 
                               backgroundColor,
                               color: textColor,
-                              minWidth: '40px',
-                              maxWidth: '45px',
+                              minWidth: '80px',
+                              maxWidth: '90px',
                               height: '35px'
                             }}
                           >
@@ -412,36 +450,39 @@ const LiveHeatmap: React.FC = () => {
                 <Download className="h-5 w-5 mr-2" />
                 Export Data to Excel
               </h3>
-              <div className="flex items-center space-x-4 flex-wrap">
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm text-gray-300">Export Type:</label>
-                  <Select value={exportType} onValueChange={setExportType}>
-                    <SelectTrigger className="w-40 bg-gray-800 border-gray-600 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="live">Live Data</SelectItem>
-                      <SelectItem value="specific">Specific Time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {exportType === 'specific' && (
-                  <div className="flex items-center space-x-2">
-                    <label className="text-sm text-gray-300">Timestamp:</label>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm text-gray-300">From Time:</label>
                     <Input
                       type="datetime-local"
-                      value={specificTime}
-                      onChange={(e) => setSpecificTime(e.target.value)}
+                      value={fromTime}
+                      onChange={(e) => setFromTime(e.target.value)}
                       className="bg-gray-800 border-gray-600 text-white"
                     />
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm text-gray-300">To Time:</label>
+                    <Input
+                      type="datetime-local"
+                      value={toTime}
+                      onChange={(e) => setToTime(e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                  </div>
+                </div>
+                
+                {exportError && (
+                  <div className="flex items-center space-x-2 text-red-400 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{exportError}</span>
                   </div>
                 )}
                 
                 <Button
                   onClick={exportToExcel}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={exportType === 'specific' && !specificTime}
+                  disabled={!fromTime || !toTime}
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export to Excel
@@ -453,7 +494,7 @@ const LiveHeatmap: React.FC = () => {
             <div className="text-center text-sm text-gray-400">
               <p>
                 Updates every 10 seconds • 
-                Showing 10 parameters (rows) × 27 feeders (columns) • 
+                Showing 27 feeders (rows) × 10 parameters (columns) • 
                 Group-specific normalization: Currents (0-100), Voltages (0-500), Power Factors (0-1), Active Energy (0-1000)
               </p>
               <p className="mt-1">
