@@ -216,7 +216,7 @@ const Index = () => {
           <div className="flex items-center justify-center space-x-3">
             <Zap className="h-12 w-12 text-cyan-400" />
             <h1 className="text-5xl font-bold text-white bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Energy Monitor Pro
+              JSW Mangalore Container Terminal Pvt Ltd.
             </h1>
           </div>
           <p className="text-xl text-cyan-200">
