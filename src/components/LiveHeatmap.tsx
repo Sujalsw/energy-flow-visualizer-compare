@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Activity, Play, Pause, Download, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { Activity, Play, Pause, Download, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { fetchLatestEnergyData, fetchHistoricalEnergyData, NetworkError, EnergyDataPoint } from '../services/api';
 
 // All 27 feeders
 const slaveFeeders = [
@@ -69,6 +67,75 @@ interface HeatmapData {
   };
 }
 
+// Generate mock data that simulates the latest API response
+const generateMockApiData = () => {
+  const now = new Date();
+  const data = [];
+  
+  slaveFeeders.forEach((feeder, index) => {
+    // Simulate some feeders being "off" occasionally
+    const isOff = Math.random() < 0.15; // 15% chance of being off
+    
+    const dataPoint = {
+      id: index + 1,
+      timestamp: now.toISOString(),
+      location: "MRSS",
+      slave_id: index + 1,
+      slave_name: feeder,
+      current_r: isOff ? 0 : Math.random() * 80 + 10,
+      current_y: isOff ? 0 : Math.random() * 80 + 10,
+      current_b: isOff ? 0 : Math.random() * 80 + 10,
+      voltage_ry: isOff ? 0 : Math.random() * 400 + 100,
+      voltage_yb: isOff ? 0 : Math.random() * 400 + 100,
+      voltage_br: isOff ? 0 : Math.random() * 400 + 100,
+      power_factor_r: isOff ? 0 : Math.random() * 0.4 + 0.6,
+      power_factor_y: isOff ? 0 : Math.random() * 0.4 + 0.6,
+      power_factor_b: isOff ? 0 : Math.random() * 0.4 + 0.6,
+      active_energy: isOff ? 0 : Math.random() * 800 + 200
+    };
+    
+    data.push(dataPoint);
+  });
+  
+  return data;
+};
+
+// Generate mock historical data for time range
+const generateMockHistoricalData = (fromTime: string, toTime: string) => {
+  const start = new Date(fromTime);
+  const end = new Date(toTime);
+  const data = [];
+  
+  // Generate data points every 10 seconds within the time range
+  for (let time = new Date(start); time <= end; time.setSeconds(time.getSeconds() + 10)) {
+    slaveFeeders.forEach((feeder, index) => {
+      const isOff = Math.random() < 0.1; // 10% chance of being off
+      
+      const dataPoint = {
+        id: index + 1,
+        timestamp: time.toISOString(),
+        location: "MRSS",
+        slave_id: index + 1,
+        slave_name: feeder,
+        current_r: isOff ? 0 : Math.random() * 80 + 10,
+        current_y: isOff ? 0 : Math.random() * 80 + 10,
+        current_b: isOff ? 0 : Math.random() * 80 + 10,
+        voltage_ry: isOff ? 0 : Math.random() * 400 + 100,
+        voltage_yb: isOff ? 0 : Math.random() * 400 + 100,
+        voltage_br: isOff ? 0 : Math.random() * 400 + 100,
+        power_factor_r: isOff ? 0 : Math.random() * 0.4 + 0.6,
+        power_factor_y: isOff ? 0 : Math.random() * 0.4 + 0.6,
+        power_factor_b: isOff ? 0 : Math.random() * 0.4 + 0.6,
+        active_energy: isOff ? 0 : Math.random() * 800 + 200
+      };
+      
+      data.push(dataPoint);
+    });
+  }
+  
+  return data;
+};
+
 // Normalize a parameter value based on its group
 const normalizeParameter = (value: number, parameterGroup: string): number => {
   const range = normalizationRanges[parameterGroup as keyof typeof normalizationRanges];
@@ -106,7 +173,7 @@ const getParameterColor = (normalizedValue: number): string => {
 };
 
 // Process API data into heatmap format
-const processHeatmapData = (apiData: EnergyDataPoint[]): HeatmapData => {
+const processHeatmapData = (apiData: any[]): HeatmapData => {
   const heatmapData: HeatmapData = {};
   
   slaveFeeders.forEach(feeder => {
@@ -115,7 +182,7 @@ const processHeatmapData = (apiData: EnergyDataPoint[]): HeatmapData => {
     const feederData = apiData.find(item => item.slave_name === feeder);
     
     parameters.forEach(param => {
-      const value = feederData ? feederData[param.key as keyof EnergyDataPoint] as number : 0;
+      const value = feederData ? feederData[param.key] : 0;
       const normalizedValue = normalizeParameter(value, param.group);
       
       heatmapData[feeder][param.key] = {
@@ -135,38 +202,17 @@ const LiveHeatmap: React.FC = () => {
   const [fromTime, setFromTime] = useState<string>('');
   const [toTime, setToTime] = useState<string>('');
   const [exportError, setExportError] = useState<string>('');
-  const [networkError, setNetworkError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(true);
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    setNetworkError('');
-    
+  const fetchData = () => {
     try {
-      console.log('Fetching latest energy data from API...');
-      const apiData = await fetchLatestEnergyData();
-      console.log('Received data for', apiData.length, 'feeders');
-      
+      const apiData = generateMockApiData();
       const processedData = processHeatmapData(apiData);
       setHeatmapData(processedData);
       setLastUpdate(new Date());
-      setIsConnected(true);
       
       console.log('Heatmap data updated for', slaveFeeders.length, 'feeders and', parameters.length, 'parameters');
     } catch (error) {
       console.error('Error fetching heatmap data:', error);
-      
-      if (error instanceof NetworkError) {
-        setNetworkError(error.message);
-        setIsConnected(false);
-        setIsLiveActive(false); // Stop live updates on network error
-      } else {
-        setNetworkError('Failed to fetch data from server. Please try again.');
-        setIsConnected(false);
-      }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -189,19 +235,14 @@ const LiveHeatmap: React.FC = () => {
     return true;
   };
 
-  const exportToExcel = async () => {
+  const exportToExcel = () => {
     if (!validateTimeRange()) {
       return;
     }
 
-    setExportError('');
-    setIsLoading(true);
-
     try {
-      console.log('Fetching historical data for export...');
-      const historicalData = await fetchHistoricalEnergyData(fromTime, toTime);
-      console.log('Received', historicalData.length, 'historical records');
-      
+      // Generate mock historical data for the specified time range
+      const historicalData = generateMockHistoricalData(fromTime, toTime);
       const dataToExport: any[] = [];
       
       historicalData.forEach(record => {
@@ -211,7 +252,7 @@ const LiveHeatmap: React.FC = () => {
         };
         
         parameters.forEach(param => {
-          const value = record[param.key as keyof EnergyDataPoint] as number;
+          const value = record[param.key];
           const normalizedValue = normalizeParameter(value, param.group);
           row[param.label] = value?.toFixed(2) || '0';
           row[`${param.label} (Normalized)`] = normalizedValue?.toFixed(3) || '0';
@@ -229,15 +270,8 @@ const LiveHeatmap: React.FC = () => {
       XLSX.writeFile(workbook, filename);
       setExportError('');
     } catch (error) {
+      setExportError('Error exporting data. Please try again.');
       console.error('Export error:', error);
-      
-      if (error instanceof NetworkError) {
-        setExportError(error.message);
-      } else {
-        setExportError('Error exporting data. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -248,7 +282,7 @@ const LiveHeatmap: React.FC = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (isLiveActive && isConnected) {
+    if (isLiveActive) {
       interval = setInterval(() => {
         fetchData();
       }, 10000); // 10 seconds
@@ -259,7 +293,7 @@ const LiveHeatmap: React.FC = () => {
         clearInterval(interval);
       }
     };
-  }, [isLiveActive, isConnected]);
+  }, [isLiveActive]);
 
   return (
     <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm w-full mx-auto">
@@ -268,22 +302,10 @@ const LiveHeatmap: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Activity className="h-6 w-6 text-cyan-400" />
             <span>Live Activity Heatmap - 27x10 Grid</span>
-            {isLiveActive && isConnected && (
+            {isLiveActive && (
               <div className="flex items-center space-x-2 ml-4">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm text-green-400">Live</span>
-              </div>
-            )}
-            {!isConnected && (
-              <div className="flex items-center space-x-2 ml-4">
-                <WifiOff className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-400">Disconnected</span>
-              </div>
-            )}
-            {isConnected && !isLiveActive && (
-              <div className="flex items-center space-x-2 ml-4">
-                <Wifi className="h-4 w-4 text-cyan-500" />
-                <span className="text-sm text-cyan-400">Connected</span>
               </div>
             )}
           </div>
@@ -300,7 +322,6 @@ const LiveHeatmap: React.FC = () => {
                 ? 'bg-red-600 hover:bg-red-700' 
                 : 'bg-green-600 hover:bg-green-700'
               } text-white`}
-              disabled={!isConnected}
             >
               {isLiveActive ? (
                 <>
@@ -318,23 +339,6 @@ const LiveHeatmap: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {networkError && (
-          <div className="mb-6 p-4 bg-red-900/50 border border-red-500 rounded-lg">
-            <div className="flex items-center space-x-2 text-red-400">
-              <AlertCircle className="h-5 w-5" />
-              <span className="font-semibold">Network Error</span>
-            </div>
-            <p className="text-red-300 mt-2">{networkError}</p>
-            <Button
-              onClick={fetchData}
-              className="mt-3 bg-red-600 hover:bg-red-700 text-white"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Retrying...' : 'Retry Connection'}
-            </Button>
-          </div>
-        )}
-
         {Object.keys(heatmapData).length > 0 ? (
           <div className="space-y-4">
             {/* 27x10 Grid Heatmap - Enhanced Centering */}
@@ -462,7 +466,6 @@ const LiveHeatmap: React.FC = () => {
                           value={fromTime}
                           onChange={(e) => setFromTime(e.target.value)}
                           className="bg-gray-800 border-gray-600 text-white"
-                          disabled={!isConnected}
                         />
                       </div>
                       <div className="flex flex-col space-y-2">
@@ -472,7 +475,6 @@ const LiveHeatmap: React.FC = () => {
                           value={toTime}
                           onChange={(e) => setToTime(e.target.value)}
                           className="bg-gray-800 border-gray-600 text-white"
-                          disabled={!isConnected}
                         />
                       </div>
                     </div>
@@ -488,10 +490,10 @@ const LiveHeatmap: React.FC = () => {
                       <Button
                         onClick={exportToExcel}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
-                        disabled={!fromTime || !toTime || !isConnected || isLoading}
+                        disabled={!fromTime || !toTime}
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        {isLoading ? 'Exporting...' : 'Export to Excel'}
+                        Export to Excel
                       </Button>
                     </div>
                   </div>
@@ -509,43 +511,17 @@ const LiveHeatmap: React.FC = () => {
               <p className="mt-1">
                 Blue = Zero/Off | Green→Yellow→Orange→Red = Increasing normalized values (0→1)
               </p>
-              {!isConnected && (
-                <p className="mt-1 text-red-400">
-                  ⚠️ Network connection required for real-time data
-                </p>
-              )}
             </div>
           </div>
         ) : (
           <div className="text-center py-12">
-            {isLoading ? (
-              <>
-                <Activity className="h-16 w-16 text-cyan-400 mx-auto mb-4 animate-spin" />
-                <h3 className="text-xl font-semibold text-white mb-2">
-                  Loading Heatmap Data...
-                </h3>
-                <p className="text-gray-400">
-                  Fetching real-time parameter data from database
-                </p>
-              </>
-            ) : (
-              <>
-                <WifiOff className="h-16 w-16 text-red-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">
-                  No Data Available
-                </h3>
-                <p className="text-gray-400 mb-4">
-                  Unable to fetch data from the database
-                </p>
-                <Button
-                  onClick={fetchData}
-                  className="bg-cyan-600 hover:bg-cyan-700 text-white"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Connecting...' : 'Retry Connection'}
-                </Button>
-              </>
-            )}
+            <Activity className="h-16 w-16 text-cyan-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Loading Heatmap Data...
+            </h3>
+            <p className="text-gray-400">
+              Fetching real-time parameter data for all 27 feeders
+            </p>
           </div>
         )}
       </CardContent>
