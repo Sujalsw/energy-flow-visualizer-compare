@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -297,7 +296,7 @@ const LiveHeatmap: React.FC = () => {
   }, [isLiveActive]);
 
   return (
-    <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm max-w-full mx-auto">
+    <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm w-full mx-auto">
       <CardHeader>
         <CardTitle className="text-white flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -342,155 +341,163 @@ const LiveHeatmap: React.FC = () => {
       <CardContent>
         {Object.keys(heatmapData).length > 0 ? (
           <div className="space-y-4">
-            {/* 27x10 Grid Heatmap - Feeders as rows, Parameters as columns */}
-            <div className="w-full overflow-x-auto" style={{ maxWidth: '1000px' }}>
-              <table className="border-collapse border border-gray-600" style={{ fontSize: '11px' }}>
-                <thead>
-                  <tr>
-                    <th className="border border-gray-600 p-2 bg-gray-700 text-cyan-300 font-semibold min-w-[200px]">
-                      Feeder / Parameter
-                    </th>
-                    {parameters.map(param => (
-                      <th 
-                        key={param.key} 
-                        className="border border-gray-600 p-1 bg-gray-700 text-cyan-300 font-semibold text-center"
-                        style={{ 
-                          writingMode: 'vertical-rl',
-                          textOrientation: 'mixed',
-                          minWidth: '80px',
-                          maxWidth: '90px',
-                          height: '120px'
-                        }}
-                      >
-                        <div className="transform rotate-180" style={{ whiteSpace: 'nowrap' }}>
-                          {param.label}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {slaveFeeders.map(feeder => (
-                    <tr key={feeder}>
-                      <td className="border border-gray-600 p-2 bg-gray-700 text-gray-300 font-medium text-left">
-                        {feeder}
-                      </td>
-                      {parameters.map(param => {
-                        const cellData = heatmapData[feeder]?.[param.key];
-                        const backgroundColor = cellData 
-                          ? getParameterColor(cellData.normalizedValue)
-                          : '#374151';
-                        const textColor = cellData?.normalizedValue === 0 || (cellData?.normalizedValue || 0) > 0.5 
-                          ? '#FFFFFF' 
-                          : '#000000';
-                        
-                        return (
-                          <td
-                            key={`${feeder}-${param.key}`}
-                            className="border border-gray-600 p-1 text-center relative group cursor-pointer transition-all hover:scale-105"
+            {/* 27x10 Grid Heatmap - Centered Container */}
+            <div className="flex justify-center w-full">
+              <div className="w-full max-w-[1000px] overflow-x-auto">
+                <div className="flex justify-center">
+                  <table className="border-collapse border border-gray-600" style={{ fontSize: '11px' }}>
+                    <thead>
+                      <tr>
+                        <th className="border border-gray-600 p-2 bg-gray-700 text-cyan-300 font-semibold min-w-[200px]">
+                          Feeder / Parameter
+                        </th>
+                        {parameters.map(param => (
+                          <th 
+                            key={param.key} 
+                            className="border border-gray-600 p-1 bg-gray-700 text-cyan-300 font-semibold text-center"
                             style={{ 
-                              backgroundColor,
-                              color: textColor,
+                              writingMode: 'vertical-rl',
+                              textOrientation: 'mixed',
                               minWidth: '80px',
                               maxWidth: '90px',
-                              height: '35px'
+                              height: '120px'
                             }}
                           >
-                            <div className="text-xs font-mono leading-tight">
-                              {cellData ? cellData.value.toFixed(1) : 'N/A'}
+                            <div className="transform rotate-180" style={{ whiteSpace: 'nowrap' }}>
+                              {param.label}
                             </div>
-                            
-                            {/* Tooltip */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20">
-                              <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg border border-gray-600">
-                                <div className="font-semibold">{feeder}</div>
-                                <div>{param.label}</div>
-                                <div>Value: {cellData?.value?.toFixed(2) || 'N/A'}</div>
-                                <div>Normalized: {cellData?.normalizedValue?.toFixed(3) || 'N/A'}</div>
-                                <div>Last Update: {lastUpdate?.toLocaleTimeString()}</div>
-                              </div>
-                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {slaveFeeders.map(feeder => (
+                        <tr key={feeder}>
+                          <td className="border border-gray-600 p-2 bg-gray-700 text-gray-300 font-medium text-left">
+                            {feeder}
                           </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Legend */}
-            <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg">
-              <span className="text-sm text-gray-300 font-semibold">Normalized Value Legend:</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4" style={{ backgroundColor: '#0000FF' }}></div>
-                <span className="text-xs text-gray-400">Off/Zero</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4" style={{ backgroundColor: '#00FF00' }}></div>
-                <span className="text-xs text-gray-400">Low (0-0.25)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4" style={{ backgroundColor: '#FFFF00' }}></div>
-                <span className="text-xs text-gray-400">Medium (0.25-0.5)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4" style={{ backgroundColor: '#FFA500' }}></div>
-                <span className="text-xs text-gray-400">High (0.5-0.75)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4" style={{ backgroundColor: '#FF0000' }}></div>
-                <span className="text-xs text-gray-400">Critical (0.75-1.0)</span>
-              </div>
-            </div>
-
-            {/* Export Section */}
-            <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-600">
-              <h3 className="text-lg font-semibold text-cyan-300 mb-4 flex items-center">
-                <Download className="h-5 w-5 mr-2" />
-                Export Data to Excel
-              </h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm text-gray-300">From Time:</label>
-                    <Input
-                      type="datetime-local"
-                      value={fromTime}
-                      onChange={(e) => setFromTime(e.target.value)}
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm text-gray-300">To Time:</label>
-                    <Input
-                      type="datetime-local"
-                      value={toTime}
-                      onChange={(e) => setToTime(e.target.value)}
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
-                  </div>
+                          {parameters.map(param => {
+                            const cellData = heatmapData[feeder]?.[param.key];
+                            const backgroundColor = cellData 
+                              ? getParameterColor(cellData.normalizedValue)
+                              : '#374151';
+                            const textColor = cellData?.normalizedValue === 0 || (cellData?.normalizedValue || 0) > 0.5 
+                              ? '#FFFFFF' 
+                              : '#000000';
+                            
+                            return (
+                              <td
+                                key={`${feeder}-${param.key}`}
+                                className="border border-gray-600 p-1 text-center relative group cursor-pointer transition-all hover:scale-105"
+                                style={{ 
+                                  backgroundColor,
+                                  color: textColor,
+                                  minWidth: '80px',
+                                  maxWidth: '90px',
+                                  height: '35px'
+                                }}
+                              >
+                                <div className="text-xs font-mono leading-tight">
+                                  {cellData ? cellData.value.toFixed(1) : 'N/A'}
+                                </div>
+                                
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20">
+                                  <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg border border-gray-600">
+                                    <div className="font-semibold">{feeder}</div>
+                                    <div>{param.label}</div>
+                                    <div>Value: {cellData?.value?.toFixed(2) || 'N/A'}</div>
+                                    <div>Normalized: {cellData?.normalizedValue?.toFixed(3) || 'N/A'}</div>
+                                    <div>Last Update: {lastUpdate?.toLocaleTimeString()}</div>
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                
-                {exportError && (
-                  <div className="flex items-center space-x-2 text-red-400 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{exportError}</span>
-                  </div>
-                )}
-                
-                <Button
-                  onClick={exportToExcel}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={!fromTime || !toTime}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export to Excel
-                </Button>
               </div>
             </div>
 
-            {/* Update Info */}
+            {/* Legend - Centered */}
+            <div className="flex justify-center">
+              <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg max-w-[1000px]">
+                <span className="text-sm text-gray-300 font-semibold">Normalized Value Legend:</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4" style={{ backgroundColor: '#0000FF' }}></div>
+                  <span className="text-xs text-gray-400">Off/Zero</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4" style={{ backgroundColor: '#00FF00' }}></div>
+                  <span className="text-xs text-gray-400">Low (0-0.25)</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4" style={{ backgroundColor: '#FFFF00' }}></div>
+                  <span className="text-xs text-gray-400">Medium (0.25-0.5)</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4" style={{ backgroundColor: '#FFA500' }}></div>
+                  <span className="text-xs text-gray-400">High (0.5-0.75)</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4" style={{ backgroundColor: '#FF0000' }}></div>
+                  <span className="text-xs text-gray-400">Critical (0.75-1.0)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Export Section - Centered */}
+            <div className="flex justify-center">
+              <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-600 max-w-[1000px] w-full">
+                <h3 className="text-lg font-semibold text-cyan-300 mb-4 flex items-center">
+                  <Download className="h-5 w-5 mr-2" />
+                  Export Data to Excel
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-2">
+                      <label className="text-sm text-gray-300">From Time:</label>
+                      <Input
+                        type="datetime-local"
+                        value={fromTime}
+                        onChange={(e) => setFromTime(e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                      <label className="text-sm text-gray-300">To Time:</label>
+                      <Input
+                        type="datetime-local"
+                        value={toTime}
+                        onChange={(e) => setToTime(e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                  </div>
+                  
+                  {exportError && (
+                    <div className="flex items-center space-x-2 text-red-400 text-sm">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{exportError}</span>
+                    </div>
+                  )}
+                  
+                  <Button
+                    onClick={exportToExcel}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={!fromTime || !toTime}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export to Excel
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Update Info - Centered */}
             <div className="text-center text-sm text-gray-400">
               <p>
                 Updates every 10 seconds • 
