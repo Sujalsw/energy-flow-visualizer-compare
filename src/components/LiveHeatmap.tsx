@@ -341,11 +341,11 @@ const LiveHeatmap: React.FC = () => {
       <CardContent>
         {Object.keys(heatmapData).length > 0 ? (
           <div className="space-y-4">
-            {/* 27x10 Grid Heatmap - Centered Container */}
-            <div className="flex justify-center w-full">
-              <div className="w-full max-w-[1000px] overflow-x-auto">
-                <div className="flex justify-center">
-                  <table className="border-collapse border border-gray-600" style={{ fontSize: '11px' }}>
+            {/* 27x10 Grid Heatmap - Enhanced Centering */}
+            <div className="w-full flex justify-center items-center">
+              <div className="w-full max-w-none flex justify-center">
+                <div className="inline-block">
+                  <table className="border-collapse border border-gray-600 mx-auto" style={{ fontSize: '11px' }}>
                     <thead>
                       <tr>
                         <th className="border border-gray-600 p-2 bg-gray-700 text-cyan-300 font-semibold min-w-[200px]">
@@ -422,9 +422,9 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Legend - Centered */}
-            <div className="flex justify-center">
-              <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg max-w-[1000px]">
+            {/* Legend - Enhanced Centering */}
+            <div className="w-full flex justify-center">
+              <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg">
                 <span className="text-sm text-gray-300 font-semibold">Normalized Value Legend:</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4" style={{ backgroundColor: '#0000FF' }}></div>
@@ -449,50 +449,54 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Export Section - Centered */}
-            <div className="flex justify-center">
-              <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-600 max-w-[1000px] w-full">
-                <h3 className="text-lg font-semibold text-cyan-300 mb-4 flex items-center">
-                  <Download className="h-5 w-5 mr-2" />
-                  Export Data to Excel
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex flex-col space-y-2">
-                      <label className="text-sm text-gray-300">From Time:</label>
-                      <Input
-                        type="datetime-local"
-                        value={fromTime}
-                        onChange={(e) => setFromTime(e.target.value)}
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
+            {/* Export Section - Enhanced Centering */}
+            <div className="w-full flex justify-center">
+              <div className="w-full max-w-4xl">
+                <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-600 mx-auto">
+                  <h3 className="text-lg font-semibold text-cyan-300 mb-4 flex items-center justify-center">
+                    <Download className="h-5 w-5 mr-2" />
+                    Export Data to Excel
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-sm text-gray-300">From Time:</label>
+                        <Input
+                          type="datetime-local"
+                          value={fromTime}
+                          onChange={(e) => setFromTime(e.target.value)}
+                          className="bg-gray-800 border-gray-600 text-white"
+                        />
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-sm text-gray-300">To Time:</label>
+                        <Input
+                          type="datetime-local"
+                          value={toTime}
+                          onChange={(e) => setToTime(e.target.value)}
+                          className="bg-gray-800 border-gray-600 text-white"
+                        />
+                      </div>
                     </div>
-                    <div className="flex flex-col space-y-2">
-                      <label className="text-sm text-gray-300">To Time:</label>
-                      <Input
-                        type="datetime-local"
-                        value={toTime}
-                        onChange={(e) => setToTime(e.target.value)}
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
+                    
+                    {exportError && (
+                      <div className="flex items-center justify-center space-x-2 text-red-400 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>{exportError}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={exportToExcel}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={!fromTime || !toTime}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export to Excel
+                      </Button>
                     </div>
                   </div>
-                  
-                  {exportError && (
-                    <div className="flex items-center space-x-2 text-red-400 text-sm">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>{exportError}</span>
-                    </div>
-                  )}
-                  
-                  <Button
-                    onClick={exportToExcel}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={!fromTime || !toTime}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export to Excel
-                  </Button>
                 </div>
               </div>
             </div>
