@@ -222,6 +222,8 @@ const Index = () => {
       normalizedValue = Math.min((value - 0.7) / 0.3, 1); // Range 0.7-1.0
     } else if (param === 'active_energy') {
       normalizedValue = Math.min(value / 1500, 1); // Max expected 1500 kWh
+    } else {
+      normalizedValue = Math.random() * 100;
     }
     
     const intensity = Math.max(0, Math.min(1, normalizedValue));
@@ -372,74 +374,6 @@ const Index = () => {
                     {generateChartLines()}
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Real-time Heatmap - Only show selected feeders and parameters */}
-        {selectedFeeders.length > 0 && selectedParameters.length > 0 && chartData.length > 0 && (
-          <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <Grid className="h-6 w-6 text-cyan-400" />
-                <span>Real-time Values Heatmap</span>
-                {isRealTimeActive && (
-                  <div className="flex items-center space-x-2 ml-4">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-green-400">Live</span>
-                  </div>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr>
-                      <th className="text-left text-cyan-300 p-3 font-semibold">Feeder / Parameter</th>
-                      {selectedParameters.map(param => {
-                        const paramInfo = parameters.find(p => p.value === param);
-                        return (
-                          <th key={param} className="text-center text-cyan-300 p-3 font-semibold min-w-[120px]">
-                            {paramInfo?.label || param}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedFeeders.map(feeder => (
-                      <tr key={feeder} className="border-t border-gray-600">
-                        <td className="text-gray-300 p-3 font-medium text-sm">
-                          {feeder}
-                        </td>
-                        {selectedParameters.map(param => {
-                          const key = `${feeder}_${param}`;
-                          const value = latestValues[key];
-                          const paramInfo = parameters.find(p => p.value === param);
-                          
-                          return (
-                            <td
-                              key={key}
-                              className="text-center p-3 text-white font-mono text-sm rounded-lg"
-                              style={{
-                                backgroundColor: value ? getHeatmapColor(value, param) : '#374151',
-                                margin: '2px'
-                              }}
-                            >
-                              {value ? `${value.toFixed(2)} ${paramInfo?.unit || ''}` : 'N/A'}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 text-xs text-gray-400 text-center">
-                <p>Color intensity indicates relative value within expected range for each parameter</p>
-                <p>Green = Higher values, Red = Lower values</p>
               </div>
             </CardContent>
           </Card>
