@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -341,14 +342,14 @@ const LiveHeatmap: React.FC = () => {
       <CardContent>
         {Object.keys(heatmapData).length > 0 ? (
           <div className="space-y-4">
-            {/* 27x10 Grid Heatmap - Enhanced Centering */}
-            <div className="w-full flex justify-center items-center">
-              <div className="w-full max-w-none flex justify-center">
-                <div className="inline-block">
-                  <table className="border-collapse border border-gray-600 mx-auto" style={{ fontSize: '11px' }}>
+            {/* 27x10 Grid Heatmap - Optimized for single view */}
+            <div className="w-full">
+              <div className="w-full overflow-auto">
+                <div className="inline-block min-w-full">
+                  <table className="border-collapse border border-gray-600 w-full" style={{ fontSize: '9px' }}>
                     <thead>
                       <tr>
-                        <th className="border border-gray-600 p-2 bg-gray-700 text-cyan-300 font-semibold min-w-[200px]">
+                        <th className="border border-gray-600 p-1 bg-gray-700 text-cyan-300 font-semibold" style={{ minWidth: '120px', width: '120px' }}>
                           Feeder / Parameter
                         </th>
                         {parameters.map(param => (
@@ -358,13 +359,13 @@ const LiveHeatmap: React.FC = () => {
                             style={{ 
                               writingMode: 'vertical-rl',
                               textOrientation: 'mixed',
-                              minWidth: '80px',
-                              maxWidth: '90px',
-                              height: '120px'
+                              minWidth: '50px',
+                              width: '50px',
+                              height: '80px'
                             }}
                           >
                             <div className="transform rotate-180" style={{ whiteSpace: 'nowrap' }}>
-                              {param.label}
+                              {param.label.replace(' (A)', '').replace(' (V)', '').replace(' (kWh)', '')}
                             </div>
                           </th>
                         ))}
@@ -373,8 +374,8 @@ const LiveHeatmap: React.FC = () => {
                     <tbody>
                       {slaveFeeders.map(feeder => (
                         <tr key={feeder}>
-                          <td className="border border-gray-600 p-2 bg-gray-700 text-gray-300 font-medium text-left">
-                            {feeder}
+                          <td className="border border-gray-600 p-1 bg-gray-700 text-gray-300 font-medium text-left" style={{ fontSize: '8px', width: '120px' }}>
+                            {feeder.length > 20 ? feeder.substring(0, 20) + '...' : feeder}
                           </td>
                           {parameters.map(param => {
                             const cellData = heatmapData[feeder]?.[param.key];
@@ -392,13 +393,13 @@ const LiveHeatmap: React.FC = () => {
                                 style={{ 
                                   backgroundColor,
                                   color: textColor,
-                                  minWidth: '80px',
-                                  maxWidth: '90px',
-                                  height: '35px'
+                                  width: '50px',
+                                  height: '22px',
+                                  fontSize: '8px'
                                 }}
                               >
                                 <div className="text-xs font-mono leading-tight">
-                                  {cellData ? cellData.value.toFixed(1) : 'N/A'}
+                                  {cellData ? cellData.value.toFixed(0) : 'N/A'}
                                 </div>
                                 
                                 {/* Tooltip */}
@@ -422,59 +423,59 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Legend - Enhanced Centering */}
+            {/* Legend - Compact */}
             <div className="w-full flex justify-center">
-              <div className="flex items-center justify-center space-x-6 p-4 bg-gray-900/50 rounded-lg">
-                <span className="text-sm text-gray-300 font-semibold">Normalized Value Legend:</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4" style={{ backgroundColor: '#0000FF' }}></div>
-                  <span className="text-xs text-gray-400">Off/Zero</span>
+              <div className="flex items-center justify-center space-x-4 p-3 bg-gray-900/50 rounded-lg">
+                <span className="text-sm text-gray-300 font-semibold">Value Legend:</span>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3" style={{ backgroundColor: '#0000FF' }}></div>
+                  <span className="text-xs text-gray-400">Off</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4" style={{ backgroundColor: '#00FF00' }}></div>
-                  <span className="text-xs text-gray-400">Low (0-0.25)</span>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3" style={{ backgroundColor: '#00FF00' }}></div>
+                  <span className="text-xs text-gray-400">Low</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4" style={{ backgroundColor: '#FFFF00' }}></div>
-                  <span className="text-xs text-gray-400">Medium (0.25-0.5)</span>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3" style={{ backgroundColor: '#FFFF00' }}></div>
+                  <span className="text-xs text-gray-400">Med</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4" style={{ backgroundColor: '#FFA500' }}></div>
-                  <span className="text-xs text-gray-400">High (0.5-0.75)</span>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3" style={{ backgroundColor: '#FFA500' }}></div>
+                  <span className="text-xs text-gray-400">High</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4" style={{ backgroundColor: '#FF0000' }}></div>
-                  <span className="text-xs text-gray-400">Critical (0.75-1.0)</span>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3" style={{ backgroundColor: '#FF0000' }}></div>
+                  <span className="text-xs text-gray-400">Crit</span>
                 </div>
               </div>
             </div>
 
-            {/* Export Section - Enhanced Centering */}
+            {/* Export Section - Compact */}
             <div className="w-full flex justify-center">
-              <div className="w-full max-w-4xl">
-                <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-600 mx-auto">
-                  <h3 className="text-lg font-semibold text-cyan-300 mb-4 flex items-center justify-center">
+              <div className="w-full max-w-3xl">
+                <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-600 mx-auto">
+                  <h3 className="text-lg font-semibold text-cyan-300 mb-3 flex items-center justify-center">
                     <Download className="h-5 w-5 mr-2" />
                     Export Data to Excel
                   </h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                      <div className="flex flex-col space-y-2">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-xl mx-auto">
+                      <div className="flex flex-col space-y-1">
                         <label className="text-sm text-gray-300">From Time:</label>
                         <Input
                           type="datetime-local"
                           value={fromTime}
                           onChange={(e) => setFromTime(e.target.value)}
-                          className="bg-gray-800 border-gray-600 text-white"
+                          className="bg-gray-800 border-gray-600 text-white text-sm"
                         />
                       </div>
-                      <div className="flex flex-col space-y-2">
+                      <div className="flex flex-col space-y-1">
                         <label className="text-sm text-gray-300">To Time:</label>
                         <Input
                           type="datetime-local"
                           value={toTime}
                           onChange={(e) => setToTime(e.target.value)}
-                          className="bg-gray-800 border-gray-600 text-white"
+                          className="bg-gray-800 border-gray-600 text-white text-sm"
                         />
                       </div>
                     </div>
@@ -501,15 +502,11 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Update Info - Centered */}
-            <div className="text-center text-sm text-gray-400">
+            {/* Update Info - Compact */}
+            <div className="text-center text-xs text-gray-400">
               <p>
-                Updates every 10 seconds • 
-                Showing 27 feeders (rows) × 10 parameters (columns) • 
-                Group-specific normalization: Currents (0-100), Voltages (0-500), Power Factors (0-1), Active Energy (0-1000)
-              </p>
-              <p className="mt-1">
-                Blue = Zero/Off | Green→Yellow→Orange→Red = Increasing normalized values (0→1)
+                Updates every 10 seconds • 27 feeders × 10 parameters • 
+                Group normalization: Currents (0-100), Voltages (0-500), Power Factors (0-1), Energy (0-1000)
               </p>
             </div>
           </div>
