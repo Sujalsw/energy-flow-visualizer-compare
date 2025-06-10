@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -94,8 +95,8 @@ const generateChartData = (apiData: any[], selectedFeeders: string[], selectedPa
 };
 
 const Index = () => {
-  const [selectedFeeders, setSelectedFeeders] = useState<string[]>([]);
-  const [selectedParameters, setSelectedParameters] = useState<string[]>([]);
+  const [selectedFeeders, setSelectedFeeders] = useState<string[]>(['SERVER ROOM UPS 10 KVA']);
+  const [selectedParameters, setSelectedParameters] = useState<string[]>(['current_r']);
   const [chartData, setChartData] = useState<any[]>([]);
   const [networkError, setNetworkError] = useState<string>('');
 
@@ -183,168 +184,208 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4 mb-8">
-          <div className="flex items-center justify-center space-x-3">
-            <Zap className="h-12 w-12 text-cyan-400" />
-            <h1 className="text-5xl font-bold text-white bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Energy Monitor Pro
-            </h1>
+    <div style={{ fontFamily: 'Roboto, sans-serif' }}>
+      {/* Professional Navbar */}
+      <nav style={{
+        position: 'fixed',
+        top: 0,
+        width: '100%',
+        height: '60px',
+        backgroundColor: '#1A2526',
+        color: '#FFFFFF',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 10px',
+        zIndex: 1000,
+        borderBottom: '1px solid #e0e0e0'
+      }}>
+        <img 
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/JSW_Group_logo.svg/240px-JSW_Group_logo.svg.png"
+          alt="JSW Logo"
+          style={{
+            width: '40px',
+            height: '40px',
+            marginRight: '10px',
+            objectFit: 'contain'
+          }}
+        />
+        <span style={{ fontSize: '18px', fontWeight: '500' }}>
+          JSW Mangalore Container Terminal Pvt. Ltd.
+        </span>
+      </nav>
+
+      {/* Main Content with margin for fixed navbar */}
+      <div style={{ marginTop: '60px', fontFamily: 'Roboto, sans-serif' }}>
+        {/* Live Heatmap Section - immediately after navbar */}
+        <div style={{ padding: '10px 20px' }}>
+          <div style={{
+            border: '1px solid #e0e0e0',
+            borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            overflow: 'hidden'
+          }}>
+            <LiveHeatmap />
           </div>
-          <p className="text-xl text-cyan-200">
-            Real-time Multi-Feeder Electrical Parameter Comparison Dashboard
-          </p>
         </div>
 
-        {/* Live Heatmap - Power BI Style Table */}
-        <LiveHeatmap />
-
-        {/* Control Panel */}
-        <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center space-x-2">
-              <Activity className="h-6 w-6 text-cyan-400" />
-              <span>Comparison Control Panel</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Feeder Selection */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-cyan-300">Select Feeders</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-4 bg-gray-900/50 rounded-lg border border-gray-600">
-                  {slaveFeeders.map(feeder => (
-                    <div key={feeder} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={feeder}
-                        checked={selectedFeeders.includes(feeder)}
-                        onCheckedChange={() => handleFeederToggle(feeder)}
-                        className="border-cyan-500 text-cyan-400"
-                      />
-                      <label htmlFor={feeder} className="text-sm text-gray-300 cursor-pointer hover:text-cyan-300 transition-colors">
-                        {feeder}
-                      </label>
+        {/* Comparison Section */}
+        <div style={{ padding: '20px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Control Panel */}
+            <div style={{
+              border: '1px solid #e0e0e0',
+              borderRadius: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              overflow: 'hidden'
+            }}>
+              <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm h-full">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center space-x-2">
+                    <Activity className="h-6 w-6 text-cyan-400" />
+                    <span>Comparison Control Panel</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-6">
+                    {/* Feeder Selection */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-cyan-300">Select Feeders</h3>
+                      <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto p-4 bg-gray-900/50 rounded-lg border border-gray-600">
+                        {slaveFeeders.map(feeder => (
+                          <div key={feeder} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={feeder}
+                              checked={selectedFeeders.includes(feeder)}
+                              onCheckedChange={() => handleFeederToggle(feeder)}
+                              className="border-cyan-500 text-cyan-400"
+                            />
+                            <label htmlFor={feeder} className="text-sm text-gray-300 cursor-pointer hover:text-cyan-300 transition-colors">
+                              {feeder}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-sm text-cyan-400">
+                        Selected: {selectedFeeders.length} feeders
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="text-sm text-cyan-400">
-                  Selected: {selectedFeeders.length} feeders
-                </div>
-              </div>
 
-              {/* Parameter Selection */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-cyan-300">Select Parameters</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto p-4 bg-gray-900/50 rounded-lg border border-gray-600">
-                  {parameters.map(param => (
-                    <div key={param.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={param.value}
-                        checked={selectedParameters.includes(param.value)}
-                        onCheckedChange={() => handleParameterToggle(param.value)}
-                        className="border-cyan-500 text-cyan-400"
-                      />
-                      <label htmlFor={param.value} className="text-sm text-gray-300 cursor-pointer hover:text-cyan-300 transition-colors">
-                        {param.label}
-                      </label>
+                    {/* Parameter Selection */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-cyan-300">Select Parameters</h3>
+                      <div className="space-y-2 max-h-60 overflow-y-auto p-4 bg-gray-900/50 rounded-lg border border-gray-600">
+                        {parameters.map(param => (
+                          <div key={param.value} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={param.value}
+                              checked={selectedParameters.includes(param.value)}
+                              onCheckedChange={() => handleParameterToggle(param.value)}
+                              className="border-cyan-500 text-cyan-400"
+                            />
+                            <label htmlFor={param.value} className="text-sm text-gray-300 cursor-pointer hover:text-cyan-300 transition-colors">
+                              {param.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-sm text-cyan-400">
+                        Selected: {selectedParameters.length} parameters
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="text-sm text-cyan-400">
-                  Selected: {selectedParameters.length} parameters
-                </div>
-              </div>
+                  </div>
+
+                  {/* Control Info */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-green-400">Live Updates Active</span>
+                    </div>
+                    
+                    <div className="text-sm text-gray-400">
+                      {selectedFeeders.length > 0 && selectedParameters.length > 0 && (
+                        <span>Total lines: {selectedFeeders.length * selectedParameters.length}</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Control Info - Remove buttons, show status */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-400">Live Updates Active</span>
-              </div>
-              
-              <div className="text-sm text-gray-400">
-                {selectedFeeders.length > 0 && selectedParameters.length > 0 && (
-                  <span>Total lines: {selectedFeeders.length * selectedParameters.length}</span>
-                )}
-              </div>
+            {/* Chart Display */}
+            <div style={{
+              border: '1px solid #e0e0e0',
+              borderRadius: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              overflow: 'hidden'
+            }}>
+              {networkError ? (
+                <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm h-full">
+                  <CardContent className="text-center py-12">
+                    <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">Network Error</h3>
+                    <p className="text-red-400">{networkError}</p>
+                  </CardContent>
+                </Card>
+              ) : selectedFeeders.length > 0 && selectedParameters.length > 0 ? (
+                <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm h-full">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center space-x-2">
+                      <TrendingUp className="h-6 w-6 text-cyan-400" />
+                      <span>Multi-Parameter Comparison Chart</span>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-green-400">Live</span>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-96">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                          <XAxis 
+                            dataKey="timestamp" 
+                            stroke="#9ca3af"
+                            fontSize={12}
+                          />
+                          <YAxis 
+                            stroke="#9ca3af"
+                            fontSize={12}
+                          />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: '#1f2937',
+                              border: '1px solid #374151',
+                              borderRadius: '8px',
+                              color: '#f3f4f6'
+                            }}
+                          />
+                          <Legend />
+                          {generateChartLines()}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm h-full">
+                  <CardContent className="text-center py-12">
+                    <Zap className="h-16 w-16 text-cyan-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      Energy Analysis Dashboard
+                    </h3>
+                    <p className="text-gray-400 mb-4">
+                      Default selections active - monitoring first feeder and parameter
+                    </p>
+                    <div className="text-sm text-gray-500">
+                      <p>Current monitoring: SERVER ROOM UPS 10 KVA - Current R Phase</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Chart Display */}
-        {networkError ? (
-          <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
-            <CardContent className="text-center py-12">
-              <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">Network Error</h3>
-              <p className="text-red-400">{networkError}</p>
-            </CardContent>
-          </Card>
-        ) : selectedFeeders.length > 0 && selectedParameters.length > 0 ? (
-          <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <TrendingUp className="h-6 w-6 text-cyan-400" />
-                <span>Multi-Parameter Comparison Chart</span>
-                <div className="flex items-center space-x-2 ml-4">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-green-400">Live</span>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis 
-                      dataKey="timestamp" 
-                      stroke="#9ca3af"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="#9ca3af"
-                      fontSize={12}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: '1px solid #374151',
-                        borderRadius: '8px',
-                        color: '#f3f4f6'
-                      }}
-                    />
-                    <Legend />
-                    {generateChartLines()}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
-            <CardContent className="text-center py-12">
-              <Zap className="h-16 w-16 text-cyan-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Get Started with Your Energy Analysis
-              </h3>
-              <p className="text-gray-400 mb-4">
-                Select at least one feeder and one parameter to begin visualizing your energy data
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto text-sm text-gray-500">
-                <div className="p-4 bg-gray-900/30 rounded-lg">
-                  <strong className="text-cyan-400">Step 1:</strong> Choose feeders from the list (e.g., SERVER ROOM UPS, MLDB)
-                </div>
-                <div className="p-4 bg-gray-900/30 rounded-lg">
-                  <strong className="text-cyan-400">Step 2:</strong> Select electrical parameters to monitor (e.g., Current R, Voltage RY)
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
