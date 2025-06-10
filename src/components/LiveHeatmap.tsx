@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Activity, Play, Pause, Download, AlertCircle } from 'lucide-react';
+import { Activity, Download, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 // All 27 feeders
@@ -198,7 +197,6 @@ const processHeatmapData = (apiData: any[]): HeatmapData => {
 
 const LiveHeatmap: React.FC = () => {
   const [heatmapData, setHeatmapData] = useState<HeatmapData>({});
-  const [isLiveActive, setIsLiveActive] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [fromTime, setFromTime] = useState<string>('');
   const [toTime, setToTime] = useState<string>('');
@@ -283,18 +281,16 @@ const LiveHeatmap: React.FC = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (isLiveActive) {
-      interval = setInterval(() => {
+    interval = setInterval(() => {
         fetchData();
       }, 10000); // 10 seconds
-    }
     
     return () => {
       if (interval) {
         clearInterval(interval);
       }
     };
-  }, [isLiveActive]);
+  }, []);
 
   return (
     <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm w-full mx-auto">
@@ -303,12 +299,10 @@ const LiveHeatmap: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Activity className="h-6 w-6 text-cyan-400" />
             <span>Live Activity Heatmap - 27x10 Grid</span>
-            {isLiveActive && (
-              <div className="flex items-center space-x-2 ml-4">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-400">Live</span>
-              </div>
-            )}
+            <div className="flex items-center space-x-2 ml-4">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-green-400">Live</span>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             {lastUpdate && (
@@ -316,26 +310,6 @@ const LiveHeatmap: React.FC = () => {
                 Last update: {lastUpdate.toLocaleTimeString()}
               </span>
             )}
-            <Button
-              onClick={() => setIsLiveActive(!isLiveActive)}
-              variant={isLiveActive ? "destructive" : "default"}
-              className={`${isLiveActive 
-                ? 'bg-red-600 hover:bg-red-700' 
-                : 'bg-green-600 hover:bg-green-700'
-              } text-white`}
-            >
-              {isLiveActive ? (
-                <>
-                  <Pause className="h-4 w-4 mr-2" />
-                  Stop Live
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Live
-                </>
-              )}
-            </Button>
           </div>
         </CardTitle>
       </CardHeader>

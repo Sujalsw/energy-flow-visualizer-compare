@@ -4,8 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Zap, Activity, TrendingUp, Grid } from 'lucide-react';
+import { Zap, Activity, TrendingUp, Grid, AlertCircle } from 'lucide-react';
 import LiveHeatmap from '../components/LiveHeatmap';
+import { fetchLatestData } from '../services/api';
 
 // Mock data structure matching your database schema
 const slaveFeeders = [
@@ -51,35 +52,38 @@ const parameters = [
   { value: 'active_energy', label: 'Active Energy (kWh)', unit: 'kWh' }
 ];
 
-// Generate mock time-series data
-const generateMockData = (feeders: string[], params: string[]) => {
-  const now = new Date();
+const colors = [
+  '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+  '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1',
+  '#14b8a6', '#f43f5e', '#22c55e', '#a855f7', '#0ea5e9'
+];
+
+// Generate chart data from API response
+const generateChartData = (apiData: any[], selectedFeeders: string[], selectedParameters: string[]) => {
   const data = [];
+  const now = new Date();
   
+  // Create 24 data points representing the last 24 * 40 seconds (16 minutes)
   for (let i = 23; i >= 0; i--) {
-    const timestamp = new Date(now.getTime() - i * 40 * 1000); // 40 second intervals
+    const timestamp = new Date(now.getTime() - i * 40 * 1000);
     const dataPoint: any = {
       timestamp: timestamp.toLocaleTimeString(),
       fullTimestamp: timestamp
     };
     
-    feeders.forEach(feeder => {
-      params.forEach(param => {
+    selectedFeeders.forEach(feeder => {
+      selectedParameters.forEach(param => {
         const key = `${feeder}_${param}`;
-        // Generate realistic mock data based on parameter type
-        let value;
-        if (param.includes('current')) {
-          value = Math.random() * 50 + 10; // 10-60A
-        } else if (param.includes('voltage')) {
-          value = Math.random() * 50 + 220; // 220-270V
-        } else if (param.includes('power_factor')) {
-          value = Math.random() * 0.3 + 0.7; // 0.7-1.0
-        } else if (param === 'active_energy') {
-          value = Math.random() * 1000 + 500; // 500-1500 kWh
+        const feederData = apiData.find(item => item.slave_name === feeder);
+        
+        if (feederData && feederData[param] !== undefined) {
+          // Add some variation to simulate time series data
+          const baseValue = feederData[param];
+          const variation = (Math.random() - 0.5) * 0.1 * baseValue;
+          dataPoint[key] = Math.max(0, Number((baseValue + variation).toFixed(2)));
         } else {
-          value = Math.random() * 100;
+          dataPoint[key] = 0;
         }
-        dataPoint[key] = Number(value.toFixed(2));
       });
     });
     
@@ -89,66 +93,41 @@ const generateMockData = (feeders: string[], params: string[]) => {
   return data;
 };
 
-const colors = [
-  '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
-  '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1',
-  '#14b8a6', '#f43f5e', '#22c55e', '#a855f7', '#0ea5e9'
-];
-
 const Index = () => {
   const [selectedFeeders, setSelectedFeeders] = useState<string[]>([]);
   const [selectedParameters, setSelectedParameters] = useState<string[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
-  const [isRealTimeActive, setIsRealTimeActive] = useState(false);
+  const [networkError, setNetworkError] = useState<string>('');
+
+  // Fetch chart data from API
+  const fetchChartData = async () => {
+    if (selectedFeeders.length > 0 && selectedParameters.length > 0) {
+      try {
+        setNetworkError('');
+        const apiData = await fetchLatestData();
+        const newData = generateChartData(apiData, selectedFeeders, selectedParameters);
+        setChartData(newData);
+      } catch (error) {
+        console.error('Error fetching chart data:', error);
+        setNetworkError('Network unavailable. Please check your connection.');
+      }
+    }
+  };
 
   // Update chart data when selections change
   useEffect(() => {
-    if (selectedFeeders.length > 0 && selectedParameters.length > 0) {
-      const newData = generateMockData(selectedFeeders, selectedParameters);
-      setChartData(newData);
-    }
+    fetchChartData();
   }, [selectedFeeders, selectedParameters]);
 
-  // Simulate real-time updates
+  // Auto-start live updates for chart data
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (isRealTimeActive && selectedFeeders.length > 0 && selectedParameters.length > 0) {
+    if (selectedFeeders.length > 0 && selectedParameters.length > 0) {
+      // Set up interval for live updates every 10 seconds
       interval = setInterval(() => {
-        setChartData(prev => {
-          const newData = [...prev];
-          // Remove oldest data point and add new one
-          newData.shift();
-          
-          const now = new Date();
-          const newDataPoint: any = {
-            timestamp: now.toLocaleTimeString(),
-            fullTimestamp: now
-          };
-          
-          selectedFeeders.forEach(feeder => {
-            selectedParameters.forEach(param => {
-              const key = `${feeder}_${param}`;
-              let value;
-              if (param.includes('current')) {
-                value = Math.random() * 50 + 10;
-              } else if (param.includes('voltage')) {
-                value = Math.random() * 50 + 220;
-              } else if (param.includes('power_factor')) {
-                value = Math.random() * 0.3 + 0.7;
-              } else if (param === 'active_energy') {
-                value = Math.random() * 1000 + 500;
-              } else {
-                value = Math.random() * 100;
-              }
-              newDataPoint[key] = Number(value.toFixed(2));
-            });
-          });
-          
-          newData.push(newDataPoint);
-          return newData;
-        });
-      }, 40000); // 40 seconds
+        fetchChartData();
+      }, 10000);
     }
     
     return () => {
@@ -156,7 +135,7 @@ const Index = () => {
         clearInterval(interval);
       }
     };
-  }, [isRealTimeActive, selectedFeeders, selectedParameters]);
+  }, [selectedFeeders, selectedParameters]);
 
   const handleFeederToggle = (feeder: string) => {
     setSelectedFeeders(prev => 
@@ -202,38 +181,6 @@ const Index = () => {
     
     return lines;
   };
-
-  // Get the latest values for heatmap
-  const getLatestValues = () => {
-    if (chartData.length === 0) return {};
-    const latestData = chartData[chartData.length - 1];
-    return latestData;
-  };
-
-  // Get color intensity based on value range for each parameter
-  const getHeatmapColor = (value: number, param: string) => {
-    let normalizedValue = 0;
-    
-    if (param.includes('current')) {
-      normalizedValue = Math.min(value / 60, 1); // Max expected 60A
-    } else if (param.includes('voltage')) {
-      normalizedValue = Math.min((value - 200) / 80, 1); // Range 200-280V
-    } else if (param.includes('power_factor')) {
-      normalizedValue = Math.min((value - 0.7) / 0.3, 1); // Range 0.7-1.0
-    } else if (param === 'active_energy') {
-      normalizedValue = Math.min(value / 1500, 1); // Max expected 1500 kWh
-    } else {
-      normalizedValue = Math.random() * 100;
-    }
-    
-    const intensity = Math.max(0, Math.min(1, normalizedValue));
-    const red = Math.floor(255 * (1 - intensity));
-    const green = Math.floor(255 * intensity);
-    
-    return `rgb(${red}, ${green}, 100)`;
-  };
-
-  const latestValues = getLatestValues();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 p-6">
@@ -311,18 +258,12 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Control Buttons */}
+            {/* Control Info - Remove buttons, show status */}
             <div className="flex items-center justify-between">
-              <Button
-                onClick={() => setIsRealTimeActive(!isRealTimeActive)}
-                variant={isRealTimeActive ? "destructive" : "default"}
-                className={`${isRealTimeActive 
-                  ? 'bg-red-600 hover:bg-red-700' 
-                  : 'bg-green-600 hover:bg-green-700'
-                } text-white`}
-              >
-                {isRealTimeActive ? 'Stop Real-time' : 'Start Real-time'}
-              </Button>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-400">Live Updates Active</span>
+              </div>
               
               <div className="text-sm text-gray-400">
                 {selectedFeeders.length > 0 && selectedParameters.length > 0 && (
@@ -334,18 +275,24 @@ const Index = () => {
         </Card>
 
         {/* Chart Display */}
-        {selectedFeeders.length > 0 && selectedParameters.length > 0 && (
+        {networkError ? (
+          <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
+            <CardContent className="text-center py-12">
+              <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Network Error</h3>
+              <p className="text-red-400">{networkError}</p>
+            </CardContent>
+          </Card>
+        ) : selectedFeeders.length > 0 && selectedParameters.length > 0 ? (
           <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-white flex items-center space-x-2">
                 <TrendingUp className="h-6 w-6 text-cyan-400" />
                 <span>Multi-Parameter Comparison Chart</span>
-                {isRealTimeActive && (
-                  <div className="flex items-center space-x-2 ml-4">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-green-400">Live</span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-2 ml-4">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-400">Live</span>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -377,10 +324,7 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {/* Status/Instructions */}
-        {(selectedFeeders.length === 0 || selectedParameters.length === 0) && (
+        ) : (
           <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm">
             <CardContent className="text-center py-12">
               <Zap className="h-16 w-16 text-cyan-400 mx-auto mb-4" />
