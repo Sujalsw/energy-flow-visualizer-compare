@@ -68,7 +68,12 @@ const Index = () => {
   };
 
   return (
-    <div style={{ fontFamily: 'Roboto, sans-serif' }}>
+    <div style={{ 
+      fontFamily: 'Roboto, sans-serif',
+      backgroundColor: '#2A4B7C',
+      minHeight: '100vh',
+      color: '#FFFFFF'
+    }}>
       <Navbar />
 
       {/* Main Content with margin for fixed navbar */}
@@ -76,10 +81,11 @@ const Index = () => {
         {/* Live Heatmap Section - immediately after navbar */}
         <div style={{ padding: '10px 20px' }}>
           <div style={{
-            border: '1px solid #e0e0e0',
+            border: '1px solid #1E3A5F',
             borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            overflow: 'hidden'
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            overflow: 'hidden',
+            backgroundColor: '#1E3A5F'
           }}>
             <LiveHeatmap />
           </div>
@@ -89,20 +95,34 @@ const Index = () => {
         <div style={{ padding: '20px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Control Panel */}
-            <ComparisonControlPanel
-              selectedFeeders={selectedFeeders}
-              selectedParameters={selectedParameters}
-              onFeederToggle={handleFeederToggle}
-              onParameterToggle={handleParameterToggle}
-            />
+            <div style={{
+              border: '1px solid #1E3A5F',
+              borderRadius: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              backgroundColor: '#1E3A5F'
+            }}>
+              <ComparisonControlPanel
+                selectedFeeders={selectedFeeders}
+                selectedParameters={selectedParameters}
+                onFeederToggle={handleFeederToggle}
+                onParameterToggle={handleParameterToggle}
+              />
+            </div>
 
             {/* Chart Display */}
-            <ComparisonChart
-              selectedFeeders={selectedFeeders}
-              selectedParameters={selectedParameters}
-              chartData={chartData}
-              networkError={networkError}
-            />
+            <div style={{
+              border: '1px solid #1E3A5F',
+              borderRadius: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              backgroundColor: '#1E3A5F'
+            }}>
+              <ComparisonChart
+                selectedFeeders={selectedFeeders}
+                selectedParameters={selectedParameters}
+                chartData={chartData}
+                networkError={networkError}
+              />
+            </div>
           </div>
         </div>
       </div>

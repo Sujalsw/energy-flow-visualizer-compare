@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Activity, Download, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-// All 27 feeders
 const slaveFeeders = [
   'INCOMING FEEDER 33 KV',
   'SERVER ROOM UPS 10 KVA',
@@ -36,7 +35,6 @@ const slaveFeeders = [
   'BACKUP GENERATOR 2'
 ];
 
-// All 10 parameters
 const parameters = [
   { key: 'current_r', label: 'Current R Phase (A)', group: 'current' },
   { key: 'current_y', label: 'Current Y Phase (A)', group: 'current' },
@@ -50,7 +48,6 @@ const parameters = [
   { key: 'active_energy', label: 'Active Energy (kWh)', group: 'active_energy' }
 ];
 
-// Group-specific normalization ranges
 const normalizationRanges = {
   current: { min: 0, max: 100 },
   voltage: { min: 0, max: 500 },
@@ -67,14 +64,12 @@ interface HeatmapData {
   };
 }
 
-// Generate mock data that simulates the latest API response
 const generateMockApiData = () => {
   const now = new Date();
   const data = [];
   
   slaveFeeders.forEach((feeder, index) => {
-    // Simulate some feeders being "off" occasionally
-    const isOff = Math.random() < 0.15; // 15% chance of being off
+    const isOff = Math.random() < 0.15;
     
     const dataPoint = {
       id: index + 1,
@@ -100,16 +95,14 @@ const generateMockApiData = () => {
   return data;
 };
 
-// Generate mock historical data for time range
 const generateMockHistoricalData = (fromTime: string, toTime: string) => {
   const start = new Date(fromTime);
   const end = new Date(toTime);
   const data = [];
   
-  // Generate data points every 10 seconds within the time range
   for (let time = new Date(start); time <= end; time.setSeconds(time.getSeconds() + 10)) {
     slaveFeeders.forEach((feeder, index) => {
-      const isOff = Math.random() < 0.1; // 10% chance of being off
+      const isOff = Math.random() < 0.1;
       
       const dataPoint = {
         id: index + 1,
@@ -136,7 +129,6 @@ const generateMockHistoricalData = (fromTime: string, toTime: string) => {
   return data;
 };
 
-// Normalize a parameter value based on its group
 const normalizeParameter = (value: number, parameterGroup: string): number => {
   const range = normalizationRanges[parameterGroup as keyof typeof normalizationRanges];
   if (!range) return 0;
@@ -144,35 +136,28 @@ const normalizeParameter = (value: number, parameterGroup: string): number => {
   return Math.max(0, Math.min(1, (value - range.min) / (range.max - range.min)));
 };
 
-// Get color based on normalized value
 const getParameterColor = (normalizedValue: number): string => {
   if (normalizedValue === 0) {
-    return '#0000FF'; // Blue for off/zero values
+    return '#0000FF';
   }
   
-  // Color gradient based on normalized value
   if (normalizedValue <= 0.25) {
-    // Green to Yellow (0-0.25)
     const ratio = normalizedValue / 0.25;
     const red = Math.floor(255 * ratio);
     return `rgb(${red}, 255, 0)`;
   } else if (normalizedValue <= 0.5) {
-    // Yellow to Orange (0.25-0.5)
     const ratio = (normalizedValue - 0.25) / 0.25;
     const green = Math.floor(255 * (1 - ratio * 0.35));
     return `rgb(255, ${green}, 0)`;
   } else if (normalizedValue <= 0.75) {
-    // Orange to Red (0.5-0.75)
     const ratio = (normalizedValue - 0.5) / 0.25;
     const green = Math.floor(165 * (1 - ratio));
     return `rgb(255, ${green}, 0)`;
   } else {
-    // Red (0.75-1.0)
     return '#FF0000';
   }
 };
 
-// Process API data into heatmap format
 const processHeatmapData = (apiData: any[]): HeatmapData => {
   const heatmapData: HeatmapData = {};
   
@@ -240,7 +225,6 @@ const LiveHeatmap: React.FC = () => {
     }
 
     try {
-      // Generate mock historical data for the specified time range
       const historicalData = generateMockHistoricalData(fromTime, toTime);
       const dataToExport: any[] = [];
       
@@ -283,7 +267,7 @@ const LiveHeatmap: React.FC = () => {
     
     interval = setInterval(() => {
         fetchData();
-      }, 10000); // 10 seconds
+      }, 10000);
     
     return () => {
       if (interval) {
@@ -293,12 +277,12 @@ const LiveHeatmap: React.FC = () => {
   }, []);
 
   return (
-    <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm w-full mx-auto">
+    <Card className="bg-gray-800/50 border-cyan-500/20 backdrop-blur-sm w-full mx-auto" style={{ backgroundColor: '#2A4B7C', borderColor: '#1E3A5F' }}>
       <CardHeader>
         <CardTitle className="text-white flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Activity className="h-6 w-6 text-cyan-400" />
-            <span>Live Activity Heatmap - 27x10 Grid</span>
+            <span>Live Activity Heatmap</span>
             <div className="flex items-center space-x-2 ml-4">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <span className="text-sm text-green-400">Live</span>
@@ -306,7 +290,7 @@ const LiveHeatmap: React.FC = () => {
           </div>
           <div className="flex items-center space-x-4">
             {lastUpdate && (
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-gray-300">
                 Last update: {lastUpdate.toLocaleTimeString()}
               </span>
             )}
@@ -316,26 +300,31 @@ const LiveHeatmap: React.FC = () => {
       <CardContent>
         {Object.keys(heatmapData).length > 0 ? (
           <div className="space-y-4">
-            {/* 27x10 Grid Heatmap - Optimized for single view */}
+            {/* 27x10 Grid Heatmap */}
             <div className="w-full">
               <div className="w-full overflow-auto">
                 <div className="inline-block min-w-full">
                   <table className="border-collapse border border-gray-600 w-full" style={{ fontSize: '9px' }}>
                     <thead>
                       <tr>
-                        <th className="border border-gray-600 p-1 bg-gray-700 text-cyan-300 font-semibold" style={{ minWidth: '120px', width: '120px' }}>
+                        <th className="border border-gray-600 p-1 text-cyan-300 font-semibold" style={{ 
+                          minWidth: '120px', 
+                          width: '120px',
+                          backgroundColor: '#1E3A5F'
+                        }}>
                           Feeder / Parameter
                         </th>
                         {parameters.map(param => (
                           <th 
                             key={param.key} 
-                            className="border border-gray-600 p-1 bg-gray-700 text-cyan-300 font-semibold text-center"
+                            className="border border-gray-600 p-1 text-cyan-300 font-semibold text-center"
                             style={{ 
                               writingMode: 'vertical-rl',
                               textOrientation: 'mixed',
                               minWidth: '50px',
                               width: '50px',
-                              height: '80px'
+                              height: '80px',
+                              backgroundColor: '#1E3A5F'
                             }}
                           >
                             <div className="transform rotate-180" style={{ whiteSpace: 'nowrap' }}>
@@ -348,7 +337,11 @@ const LiveHeatmap: React.FC = () => {
                     <tbody>
                       {slaveFeeders.map(feeder => (
                         <tr key={feeder}>
-                          <td className="border border-gray-600 p-1 bg-gray-700 text-gray-300 font-medium text-left" style={{ fontSize: '8px', width: '120px' }}>
+                          <td className="border border-gray-600 p-1 text-gray-300 font-medium text-left" style={{ 
+                            fontSize: '8px', 
+                            width: '120px',
+                            backgroundColor: '#1E3A5F'
+                          }}>
                             {feeder.length > 20 ? feeder.substring(0, 20) + '...' : feeder}
                           </td>
                           {parameters.map(param => {
@@ -376,7 +369,6 @@ const LiveHeatmap: React.FC = () => {
                                   {cellData ? cellData.value.toFixed(0) : 'N/A'}
                                 </div>
                                 
-                                {/* Tooltip */}
                                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20">
                                   <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg border border-gray-600">
                                     <div className="font-semibold">{feeder}</div>
@@ -397,9 +389,9 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Legend - Compact */}
+            {/* Legend */}
             <div className="w-full flex justify-center">
-              <div className="flex items-center justify-center space-x-4 p-3 bg-gray-900/50 rounded-lg">
+              <div className="flex items-center justify-center space-x-4 p-3 rounded-lg" style={{ backgroundColor: '#1E3A5F' }}>
                 <span className="text-sm text-gray-300 font-semibold">Value Legend:</span>
                 <div className="flex items-center space-x-1">
                   <div className="w-3 h-3" style={{ backgroundColor: '#0000FF' }}></div>
@@ -424,10 +416,10 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Export Section - Compact */}
+            {/* Export Section */}
             <div className="w-full flex justify-center">
               <div className="w-full max-w-3xl">
-                <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-600 mx-auto">
+                <div className="p-3 rounded-lg border border-gray-600 mx-auto" style={{ backgroundColor: '#1E3A5F' }}>
                   <h3 className="text-lg font-semibold text-cyan-300 mb-3 flex items-center justify-center">
                     <Download className="h-5 w-5 mr-2" />
                     Export Data to Excel
@@ -476,7 +468,7 @@ const LiveHeatmap: React.FC = () => {
               </div>
             </div>
 
-            {/* Update Info - Compact */}
+            {/* Update Info */}
             <div className="text-center text-xs text-gray-400">
               <p>
                 Updates every 10 seconds • 27 feeders × 10 parameters • 
